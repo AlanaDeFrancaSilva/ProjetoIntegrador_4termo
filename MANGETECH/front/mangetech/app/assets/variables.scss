@@ -1,0 +1,23 @@
+//Palheta de cor do nosso progeto
+//basta puxar a cor pelo nome, pode alterar
+:root {
+  /* Cores principais */
+  --primary-color: #00076D;          /* Azul escuro */
+  --primary-dark-color: #001122;     /* Azul muito escuro */
+  --secondary-color: #16C098;        /* Verde claro */
+  --complementary-color: #E2E7EF;    /* Cinza claro */
+  
+  /* Cores de fundo */
+  --background-dark: #292D32;        /* Cinza escuro */
+  --background-light: #FFFFFF;       /* Branco */
+  
+  /* Cores de texto */
+  --text-light: #FFFFFF;             /* Texto branco */
+  --text-dark: #292D32;              /* Texto escuro */
+  
+  /* Outros */
+  --button-background: #00076D;      /* Cor de fundo dos botões */
+  --button-background-hover: #001122; /* Cor de fundo dos botões ao passar o mouse */
+  --input-border: #E2E7EF;           /* Cor de borda dos inputs */
+  --input-background: #FFFFFF;       /* Cor de fundo dos inputs */
+}
