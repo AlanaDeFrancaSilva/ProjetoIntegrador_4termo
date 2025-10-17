@@ -1,15 +1,24 @@
 <template>
-  <div class="login-container">
-    <div class="login-image"></div>
-    <div class="login-form-container">
+  <div class="signup-container">
+    <div class="signup-image"></div>
+
+    <div class="signup-form-container">
       <div class="logo">
         <img src="@/assets/images/logoAzul.png" alt="Logo" />
       </div>
 
-      <div class="login-box">
-        <h2>Acesse o portal</h2>
-        <p>Entre usando seu e-mail e senha cadastrados.</p>
-        <form @submit.prevent="login">
+      <div class="signup-box">
+        <h2>Crie sua conta</h2>
+        <p>Informe seu nome, e-mail e senha</p>
+
+        <form @submit.prevent="signup">
+          <input
+            type="text"
+            v-model="name"
+            placeholder="NOME COMPLETO"
+            required
+            aria-label="Nome"
+          />
           <input
             type="email"
             v-model="email"
@@ -24,13 +33,13 @@
             required
             aria-label="Senha"
           />
-          <button type="submit" class="btn-login">Entrar</button>
+          <button type="submit" class="btn-submit">Cadastrar</button>
         </form>
       </div>
 
-      <div class="signup-box">
-        <p>Ainda não tem uma conta?</p>
-        <NuxtLink to="/signup" class="btn-signup">Criar conta</NuxtLink>
+      <div class="login-box">
+        <p>Já tem uma conta?</p>
+        <NuxtLink to="/login" class="btn-login-link">Acessar conta</NuxtLink>
       </div>
     </div>
   </div>
@@ -43,33 +52,30 @@ definePageMeta({
 
 import { ref } from 'vue'
 
+const name = ref('')
 const email = ref('')
 const password = ref('')
 
-function login() {
-  console.log(email.value, password.value)
-  // TODO: Implement login logic
+function signup() {
+  console.log('Cadastro:', name.value, email.value, password.value)
+  // TODO: lógica de cadastro
 }
 </script>
 
-
-
-
 <style scoped lang="scss">
-.login-container {
+.signup-container {
   display: flex;
   min-height: 100vh;
 
-  /* Imagem na lateral esquerda */
-  .login-image {
+  .signup-image {
     flex: 1;
-    background-color: #0883ff;  /* Pode colocar a cor de fundo aqui */
-    background-image: url('~/assets/images/fundo.png');  /* Substitua pelo caminho da sua imagem */
+    background-color: #0883ff;
+    background-image: url('~/assets/images/fundo.png');
     background-size: cover;
     background-position: center;
   }
 
-    .login-form-container {
+  .signup-form-container {
     flex: 0.45;
     background-color: white;
     padding: 30px;
@@ -85,12 +91,13 @@ function login() {
       margin-bottom: 20px;
     }
 
-    .login-box, .signup-box {
+    .signup-box,
+    .login-box {
       width: 100%;
       margin-bottom: 20px;
     }
 
-    .login-box {
+    .signup-box {
       background-color: #f9f9f9;
       padding: 20px;
       border-radius: 10px;
@@ -116,7 +123,7 @@ function login() {
         font-size: 1rem;
       }
 
-      .btn-login {
+      .btn-submit {
         width: 100%;
         padding: 12px;
         background-color: #000000;
@@ -134,7 +141,7 @@ function login() {
       }
     }
 
-    .signup-box {
+    .login-box {
       text-align: center;
 
       p {
@@ -143,7 +150,7 @@ function login() {
         margin-bottom: 10px;
       }
 
-      .btn-signup {
+      .btn-login-link {
         display: inline-block;
         width: 100%;
         padding: 12px;
@@ -156,6 +163,7 @@ function login() {
         text-decoration: none;
         cursor: pointer;
         transition: background-color 0.3s;
+
         &:hover {
           background-color: #00076d;
         }
@@ -165,14 +173,14 @@ function login() {
 }
 
 @media (max-width: 768px) {
-  .login-container {
+  .signup-container {
     flex-direction: column;
 
-    .login-image {
+    .signup-image {
       display: none;
     }
 
-    .login-form-container {
+    .signup-form-container {
       width: 100%;
       margin-top: 20px;
     }
