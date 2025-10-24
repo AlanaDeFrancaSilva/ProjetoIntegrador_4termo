@@ -152,3 +152,7 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20 #define o tamanho da pág. 
     
 }
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+}

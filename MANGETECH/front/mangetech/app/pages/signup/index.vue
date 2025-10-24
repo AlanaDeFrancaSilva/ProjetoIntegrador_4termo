@@ -27,6 +27,19 @@
             aria-label="Email"
           />
           <input
+            type="text"
+            v-model="nif"
+            placeholder="nif"
+            required
+            aria-label="NIF"
+          />
+          <input
+            type="tel"
+            v-model="phone"
+            placeholder="TELEFONE (opcional)"
+            aria-label="Telefone"
+          />
+          <input
             type="password"
             v-model="password"
             placeholder="SENHA"
@@ -54,13 +67,25 @@ import { ref } from 'vue'
 
 const name = ref('')
 const email = ref('')
+const nif = ref('')
+const phone = ref('')
 const password = ref('')
 
-function signup() {
-  console.log('Cadastro:', name.value, email.value, password.value)
-  // TODO: lógica de cadastro
+async function signup() {
+  const userData = {
+    name: name.value,
+    email: email.value,
+    password: password.value,
+    nif: nif.value,
+    phone: phone.value || null
+  }
+
+  console.log('Cadastro:', userData)
+  // TODO: enviar para o backend Django (ex: via Axios ou $fetch)
+  // await $fetch('/api/register', { method: 'POST', body: userData })
 }
 </script>
+
 
 <style scoped lang="scss">
 .signup-container {

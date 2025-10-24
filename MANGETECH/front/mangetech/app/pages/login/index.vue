@@ -42,15 +42,46 @@ definePageMeta({
 })
 
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const email = ref('')
 const password = ref('')
+const router = useRouter()
 
-function login() {
-  console.log(email.value, password.value)
-  // TODO: Implement login logic
+async function login() {
+  try {
+    const response = await fetch('http://localhost:8001/api/auth/token/login/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: email.value,
+        password: password.value
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Erro no login: ' + response.statusText)
+    }
+
+    const data = await response.json()
+    console.log('Resposta do login:', data)
+
+    if (data.auth_token) {
+      localStorage.setItem('auth_token', data.auth_token)
+      alert('Login bem sucedido!')
+      router.push('/tasks') // redireciona após login
+    } else {
+      alert('Token não recebido no login')
+    }
+  } catch (error) {
+    console.error('Erro no login:', error)
+    alert('Falha ao fazer login: ' + error.message)
+  }
 }
 </script>
+
 
 
 
