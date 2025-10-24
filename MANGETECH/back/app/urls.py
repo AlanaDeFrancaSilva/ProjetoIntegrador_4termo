@@ -13,3 +13,4 @@ router.register(r'task-status-image',TaskStatusImageView)
 router.register(r'task',TaskView)
 
 urlpatterns = router.urls
+
