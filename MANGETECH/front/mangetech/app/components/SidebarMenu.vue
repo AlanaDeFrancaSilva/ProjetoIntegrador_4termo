@@ -6,14 +6,14 @@
 
     <nav class="menu">
       <ul>
-        <li class="active">Home</li>
-        <li>Chamados</li>
-        <li>Técnicos</li>
-        <li>Clientes</li>
-        <li>Monitoramento</li>
-        <li>Alertas</li>
-        <li>Ambientes</li>
-        <li>Documentação</li>
+        <li v-for="item in menuItems" :key="item.path">
+          <NuxtLink
+            :to="item.path"
+            :class="{ active: route.path === item.path }"
+          >
+            {{ item.label }}
+          </NuxtLink>
+        </li>
       </ul>
     </nav>
 
@@ -23,6 +23,24 @@
     </div>
   </aside>
 </template>
+
+<script setup>
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+// Defina aqui suas rotas
+const menuItems = [
+  { label: 'Home', path: '/inicio' },
+  { label: 'Chamados', path: '/tasks' },
+  { label: 'Técnicos', path: '/tecnicos' },
+  { label: 'Clientes', path: '/clientes' },
+  { label: 'Monitoramento', path: '/monitoramento' },
+  { label: 'Ativos', path: '/ativos' },
+  { label: 'Ambientes', path: '/ambientes' },
+  { label: 'Documentação', path: '/documentacao' },
+]
+</script>
 
 <style scoped lang="scss">
 .sidebar {
@@ -44,14 +62,18 @@
 
     li {
       padding: 12px 0;
-      font-weight: 500;
-      cursor: pointer;
-      color: #b3b3b3;
-      transition: color 0.3s;
 
-      &.active,
-      &:hover {
-        color: #1e40af;
+      a {
+        font-weight: 500;
+        color: #b3b3b3;
+        text-decoration: none;
+        transition: color 0.3s;
+        display: block;
+
+        &.active,
+        &:hover {
+          color: #1e40af;
+        }
       }
     }
   }
