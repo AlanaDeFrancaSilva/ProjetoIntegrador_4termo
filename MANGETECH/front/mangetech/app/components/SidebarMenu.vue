@@ -18,8 +18,15 @@
     </nav>
 
     <div class="user-box" v-if="user">
-      <p class="user-name">{{ user.name }}</p>
-      <p class="user-email">{{ user.email }}</p>
+        <div class="user-info">
+            <div class="user-avatar">
+                <img src="@/assets/images/default-user-icon.jpg" alt="Avatar padrão" />
+            </div>
+            <div>
+                <p class="user-name">{{ user.name }}</p>
+                <p class="user-email">{{ user.email }}</p>
+            </div>
+        </div>
     </div>
   </aside>
 </template>
@@ -109,16 +116,46 @@ onMounted(async () => {
 
   .user-box {
     margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza horizontalmente */
+    justify-content: center; /* Centraliza verticalmente (caso precise) */
+    gap: 8px; /* Espaço entre avatar e textos */
+    padding-bottom: 20px; /* Dá um respiro do fim da sidebar */
     font-size: 0.9rem;
 
-    .user-name {
-      font-weight: 600;
-      color: #fff;
-    }
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
-    .user-email {
-      color: #888;
+  .user-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #1e40af;
+    background-color: #1e293b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
   }
+
+  .user-name {
+    font-weight: 600;
+  }
+
+  .user-email {
+    color: #888;
+  }
+}
+
 }
 </style>
