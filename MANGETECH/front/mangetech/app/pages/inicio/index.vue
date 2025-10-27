@@ -1,7 +1,5 @@
 <template>
   <div class="dashboard-container">
-    <!-- Sidebar -->
-    <SidebarMenu />
 
     <!-- Main Content -->
     <main class="main-content">
@@ -35,7 +33,7 @@
 <script setup lang="ts">
 
 definePageMeta({
-  layout: 'login-layout',
+  layout: 'dashboard-layout'
 })
 
 </script>

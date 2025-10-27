@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { getTasks } from '~/services/task.services';
+definePageMeta({
+  layout: 'dashboard-layout'
+})
 
+import { getTasks } from '~/services/task.services';
 const { data: allTasks } = await getTasks();
 
 </script>
