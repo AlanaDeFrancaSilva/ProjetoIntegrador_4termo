@@ -1,29 +1,7 @@
 <template>
   <div class="dashboard-container">
     <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="logo">
-       <img src="@/assets/images/logoHome.png" alt="Logo" />
-      </div>
-
-      <nav class="menu">
-        <ul>
-          <li class="active">Home</li>
-          <li>Chamados</li>
-          <li>Técnicos</li>
-          <li>Clientes</li>
-          <li>Monitoramento</li>
-          <li>Alertas</li>
-          <li>Ambientes</li>
-          <li>Documentação</li>
-        </ul>
-      </nav>
-
-      <div class="user-box">
-        <p class="user-name">Usuário Adm</p>
-        <p class="user-email">user@cagesystems.com</p>
-      </div>
-    </aside>
+    <SidebarMenu />
 
     <!-- Main Content -->
     <main class="main-content">
