@@ -9,7 +9,7 @@
         <li v-for="item in menuItems" :key="item.path">
           <NuxtLink
             :to="item.path"
-            :class="{ active: route.path === item.path }"
+            :class="{ active: isActive(item.path) }"
           >
             {{ item.label }}
           </NuxtLink>
@@ -17,19 +17,31 @@
       </ul>
     </nav>
 
-    <div class="user-box">
-      <p class="user-name">Usuário Adm</p>
-      <p class="user-email">user@cagesystems.com</p>
+    <div class="user-box" v-if="user">
+      <p class="user-name">{{ user.name }}</p>
+      <p class="user-email">{{ user.email }}</p>
     </div>
   </aside>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { getCurrentUser } from '@/services/auth.services'
+
+export interface User {
+  id: number
+  name: string
+  email: string
+  nif: string
+  phone?: string | null
+  is_staff: boolean
+  is_active: boolean
+  creation_date: string
+}
 
 const route = useRoute()
 
-// Defina aqui suas rotas
 const menuItems = [
   { label: 'Home', path: '/inicio' },
   { label: 'Chamados', path: '/tasks' },
@@ -40,6 +52,23 @@ const menuItems = [
   { label: 'Ambientes', path: '/ambientes' },
   { label: 'Documentação', path: '/documentacao' },
 ]
+
+const user = ref<User | null>(null)
+
+function isActive(path: string) {
+  // usa startsWith para considerar sub-rotas (ex: /clientes/123)
+  return route.path === path || route.path.startsWith(path + '/')
+}
+
+onMounted(async () => {
+  try {
+    user.value = await getCurrentUser()
+  } catch (error: any) {
+    console.error('Erro ao carregar usuário:', error)
+    // opcional: redirecionar para login se necessário
+    // if (!localStorage.getItem('auth_token')) navigateTo('/login')
+  }
+})
 </script>
 
 <style scoped lang="scss">
@@ -84,6 +113,7 @@ const menuItems = [
 
     .user-name {
       font-weight: 600;
+      color: #fff;
     }
 
     .user-email {
