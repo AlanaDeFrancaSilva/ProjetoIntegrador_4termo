@@ -1,10 +1,7 @@
 <script setup lang="ts">
-    definePageMeta({
-        layout: "login-layout"
-    });
-
+definePageMeta({
+  middleware: () => navigateTo('/login')
+})
 </script>
 
-<template>
-    <h1>Main Page!</h1>
-</template>
+<template></template>

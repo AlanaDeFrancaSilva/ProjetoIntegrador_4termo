@@ -30,7 +30,7 @@
 
       <div class="signup-box">
         <p>Ainda não tem uma conta?</p>
-        <NuxtLink to="/signup" class="btn-signup">Criar conta</NuxtLink>
+        <NuxtLink to="/inicio" class="btn-signup">Criar conta</NuxtLink>
       </div>
     </div>
   </div>
@@ -71,7 +71,7 @@ async function login() {
     if (data.auth_token) {
       localStorage.setItem('auth_token', data.auth_token)
       alert('Login bem sucedido!')
-      router.push('/tasks') // redireciona após login
+      router.push('/inicio') // redireciona 
     } else {
       alert('Token não recebido no login')
     }
