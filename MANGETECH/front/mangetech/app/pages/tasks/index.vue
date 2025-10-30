@@ -12,6 +12,14 @@ const searchQuery = ref('')
 const statusFilter = ref('') // Todos, Alta, Média, Baixa
 const isLoading = ref(false)
 
+// Mapeamento dos valores de urgência para português
+const urgencyMap = {
+  LOW: 'Baixa',
+  MEDIUM: 'Média',
+  HIGH: 'Alta',
+  EXTRA_HIGH: 'Extra Alta',  // Se você tiver esse nível extra de urgência
+}
+
 // Função de busca
 const fetchTasks = async () => {
   try {
@@ -19,13 +27,17 @@ const fetchTasks = async () => {
     const params: Record<string, any> = {}
 
     if (searchQuery.value) {
-      // busca por nome
+      // Busca por nome
       params.name = searchQuery.value
-    
     }
 
     if (statusFilter.value && statusFilter.value !== 'Todos') {
-      params.urgency_level = statusFilter.value
+      const urgencyMapRev: Record<string, string> = {
+        Baixa: 'LOW',
+        Média: 'MEDIUM',
+        Alta: 'HIGH',
+      }
+      params.urgency_level = urgencyMapRev[statusFilter.value]
     }
 
     const { data } = await getTasks(params)
@@ -113,7 +125,14 @@ watch(searchQuery, () => {
           <td>{{ task.name }}</td>
           <td>{{ task.description }}</td>
           <td>{{ task.creation_date }}</td>
-          <td>{{ task.urgency_level }}</td>
+          <td :class="{
+            'Baixa': task.urgency_level === 'LOW',
+            'Média': task.urgency_level === 'MEDIUM',
+            'Alta': task.urgency_level === 'HIGH',
+            'ExtraAlta': task.urgency_level === 'EXTRA_HIGH'
+          }">
+            {{ urgencyMap[task.urgency_level] || task.urgency_level }}
+          </td>
         </tr>
       </tbody>
     </table>
@@ -121,7 +140,6 @@ watch(searchQuery, () => {
     <div v-else class="text-gray-500 mt-4">Carregando...</div>
   </div>
 </template>
-
 
 <style scoped lang="scss">
 table {
@@ -180,6 +198,13 @@ table {
             color: #991b1b;
             border-radius: 6px;
             padding: 4px 8px;
+          }
+
+          &.ExtraAlta { 
+            background-color: #fef2f2; 
+            color: #990000;              
+            border-radius: 6px; 
+            padding: 4px 8px; 
           }
         }
       }
