@@ -1,9 +1,10 @@
 import type { Page } from '~/models/page.model'
 import type { Task } from '~/models/task.model'
 
-export const getTasks = () => {
+export const getTasks = (params?: Record<string, any>) => {
   const { $authFetch } = useNuxtApp()
-  return $authFetch<Page<Task>>('http://localhost:8001/api/task/')
+  const query = new URLSearchParams(params || {}).toString()
+  return $authFetch<Page<Task>>(`http://localhost:8001/api/task/?${query}`)
 }
 
 export const getTaskById = (id: string) => {

@@ -4,23 +4,27 @@ from django.contrib.auth.admin import UserAdmin
 
 class AdminCustomUser(UserAdmin):
     model = CustomUser
-    list_display = ['id', 'email', 'nif']
+    list_display = ['id', 'email', 'nif', 'is_staff', 'is_active']
     list_display_links = ('id', 'email', 'nif',)
+    list_filter = ('is_staff', 'is_active', 'groups')
+    search_fields = ('email', 'name', 'nif')
+    ordering = ['email']
+    readonly_fields = ('creation_date',) 
+
     fieldsets = (
         (None, {'fields': ('email','password')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 
                                     'is_superuser', 'groups', 
                                     'user_permissions',)}),
-        ('User data', {'fields': ('nif', 'phone','creation_date',)}),
+        ('User data', {'fields': ('nif', 'phone','creation_date')}),
     )
-    filter_horizontal = ('groups', 'user_permissions',)
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email','name','nif','password1','password2'),
+            'fields': ('email','name','nif','password1','password2','groups'),
         }),
     )
-    ordering = ['email']
+    filter_horizontal = ('groups', 'user_permissions',)
 
 admin.site.register(CustomUser, AdminCustomUser)
 admin.site.register(Environment)
