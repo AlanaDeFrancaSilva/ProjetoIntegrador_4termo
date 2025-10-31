@@ -17,24 +17,45 @@
       </ul>
     </nav>
 
-    <div class="user-box" v-if="user">
-        <div class="user-info">
-            <div class="user-avatar">
-                <img src="@/assets/images/default-user-icon.jpg" alt="Avatar padrão" />
-            </div>
-            <div>
-                <p class="user-name">{{ user.name }}</p>
-                <p class="user-email">{{ user.email }}</p>
-            </div>
+    <div class="user-box" v-if="userStore.user">
+      <div class="user-info" @click.stop="toggleDropdown">
+        <div class="user-avatar">
+          <img src="@/assets/images/default-user-icon.jpg" alt="Avatar padrão" />
         </div>
+        <div>
+          <p class="user-name">{{ userStore.user?.name }}</p>
+          <p class="user-email">{{ userStore.user?.email }}</p>
+
+        </div>
+      </div>
+
+      <!-- Dropdown -->
+      <UserDropdown
+        v-if="showDropdown"
+        @logout="handleLogout"
+        @open-profile="showProfileModal = true"
+      />
+
+      <UserProfileModal 
+      v-if="showProfileModal" 
+      :user="userStore.user"
+      @close="showProfileModal = false" />
+
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { getCurrentUser } from '@/services/auth.services'
+import UserDropdown from '@/components/UserDropdown.vue'
+import UserProfileModal from '@/components/UserProfileModal.vue'
+import { useUserStore } from '@/stores/user'
+
+
+const showProfileModal = ref(false)
+const userStore = useUserStore()
 
 export interface User {
   id: number
@@ -49,6 +70,7 @@ export interface User {
 
 const route = useRoute()
 
+
 const menuItems = [
   { label: 'Home', path: '/inicio' },
   { label: 'Chamados', path: '/tasks' },
@@ -60,22 +82,33 @@ const menuItems = [
   { label: 'Documentação', path: '/documentacao' },
 ]
 
-const user = ref<User | null>(null)
+
+const showDropdown = ref(false)
+
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value
+}
+
+function closeDropdown() {
+  showDropdown.value = false
+}
+
+onMounted(async () => {
+  window.addEventListener('click', closeDropdown)
+
+  try {
+    await userStore.fetchUser()
+  } catch (error: any) {
+    console.error('Erro ao carregar usuário:', error)
+  }
+})
+
 
 function isActive(path: string) {
   // usa startsWith para considerar sub-rotas (ex: /clientes/123)
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-onMounted(async () => {
-  try {
-    user.value = await getCurrentUser()
-  } catch (error: any) {
-    console.error('Erro ao carregar usuário:', error)
-    // opcional: redirecionar para login se necessário
-    // if (!localStorage.getItem('auth_token')) navigateTo('/login')
-  }
-})
 </script>
 
 <style scoped lang="scss">

@@ -16,7 +16,8 @@ export default defineNuxtConfig({
   },
   modules: [
     '@primevue/nuxt-module', 
-    '@nuxtjs/google-fonts'
+    '@nuxtjs/google-fonts',
+    '@pinia/nuxt'
   ],
   css: [ //aqui puxamos o css na ordem que queremos
     "@/assets/reset.scss",
