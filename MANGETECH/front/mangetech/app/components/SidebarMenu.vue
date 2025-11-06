@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { getCurrentUser } from '@/services/auth.services'
+import { getCurrentUser, logout } from '@/services/auth.services'
 import UserDropdown from '@/components/UserDropdown.vue'
 import UserProfileModal from '@/components/UserProfileModal.vue'
 import { useUserStore } from '@/stores/user'
@@ -56,6 +56,7 @@ import { useUserStore } from '@/stores/user'
 
 const showProfileModal = ref(false)
 const userStore = useUserStore()
+const router = useRouter()
 
 export interface User {
   id: number
@@ -107,6 +108,24 @@ onMounted(async () => {
 function isActive(path: string) {
   // usa startsWith para considerar sub-rotas (ex: /clientes/123)
   return route.path === path || route.path.startsWith(path + '/')
+}
+
+// Função de logout
+async function handleLogout() {
+  try {
+    await logout() // Chama o logout do backend
+
+    // Remove token local
+    localStorage.removeItem('auth_token')
+
+    // Limpa o usuário do Pinia
+    userStore.setUser(null)
+
+    // Redireciona para a tela de login
+    router.push('/login')
+  } catch (err) {
+    console.error('Erro ao sair:', err)
+  }
 }
 
 </script>

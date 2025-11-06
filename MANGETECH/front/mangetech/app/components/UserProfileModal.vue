@@ -92,6 +92,8 @@ async function save() {
   display: flex;
   justify-content: center;
   align-items: center;
+
+  z-index: 9999; /* Garantindo que o modal fique por cima de tudo*/
 }
 
 /* Caixa do modal */
@@ -101,6 +103,9 @@ async function save() {
   padding: 20px;
   border-radius: 10px;
   width: 380px;
+
+  z-index: 10000;
+  position: relative;
 }
 
 /* Campos de input */
