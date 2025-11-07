@@ -5,9 +5,10 @@ interface LoginResponse {
 interface User {
   id: number
   email: string
-  username: string
-  first_name: string
-  last_name: string
+  name: string
+  //nif: string
+  //phone: string
+  groups: string[]
 }
 
 export const login = (email: string, password: string) => {
@@ -32,17 +33,9 @@ export const getCurrentUser = async (): Promise<User> => {
     throw new Error('Token de autenticação não encontrado.')
   }
 
-  const { data, error } = await useFetch<User>('http://localhost:8001/api/auth/users/me/', {
-    headers: { Authorization: `Token ${token}` },
+  return await $fetch<User>('http://localhost:8001/api/auth/users/me/', {
+    headers: {
+      Authorization: `Token ${token}`,
+    },
   })
-
-  if (error.value) {
-    throw new Error('Erro ao buscar usuário atual: ' + error.value.message)
-  }
-
-  if (!data.value) {
-    throw new Error('Usuário não encontrado.')
-  }
-
-  return data.value
 }
