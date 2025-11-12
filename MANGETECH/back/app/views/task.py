@@ -16,9 +16,21 @@ class TaskView(ReadWriteSerializer, ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated: #se o usuario(user) estiver autenticado
-            if is_Admin(user.id):
-                return Task.objects.all() #if is_Admin(user.id) 
-            else:
-                return Task.objects.filter(creator_FK=user.id) #retorna tudo se o user for Admin, se não filtar emostrar apenas o que tiver o mesmo id do use
-        return Task.objects.none() #se não tiver autenticado não vê nada
+
+        if not user.is_authenticated:
+            return Task.objects.none()
+
+        # ADMIN vê tudo
+        if is_Admin(user.id):
+            return Task.objects.all()
+
+        # Técnico → tasks onde é responsável
+        if user.groups.filter(name='Técnico').exists():
+            return Task.objects.filter(responsibles_FK=user.id)
+
+        # Cliente → tasks que ele criou
+        if user.groups.filter(name='Cliente').exists():
+            return Task.objects.filter(creator_FK=user.id)
+
+        # fallback (sem grupo definido)
+        return Task.objects.none()

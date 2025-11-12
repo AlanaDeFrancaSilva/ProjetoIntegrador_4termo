@@ -3,10 +3,15 @@ from ..models import CustomUser
 
 class CustomUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
+    groups = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='name'
+    )
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'name', 'email', 'nif', 'phone', 'password']  # incluí password
+        fields = ['id', 'name', 'email', 'nif', 'phone', 'password', 'groups']
 
     def create(self, validated_data):
         password = validated_data.pop('password')

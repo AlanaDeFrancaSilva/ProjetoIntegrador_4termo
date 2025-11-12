@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getCurrentUser } from '@/services/auth.services'
 
 export interface User {
@@ -45,11 +45,12 @@ export interface User {
   is_staff: boolean
   is_active: boolean
   creation_date: string
+  groups: string[]  
 }
 
 const route = useRoute()
 
-const menuItems = [
+const baseMenu = [
   { label: 'Home', path: '/inicio' },
   { label: 'Chamados', path: '/tasks' },
   { label: 'Técnicos', path: '/tecnicos' },
@@ -70,12 +71,42 @@ function isActive(path: string) {
 onMounted(async () => {
   try {
     user.value = await getCurrentUser()
+    console.log("User logado:", user.value)
   } catch (error: any) {
     console.error('Erro ao carregar usuário:', error)
     // opcional: redirecionar para login se necessário
     // if (!localStorage.getItem('auth_token')) navigateTo('/login')
   }
 })
+
+//Nivel de acesso itens menu
+const menuItems = computed(() => {
+  if (!user.value) return []
+
+  const group = user.value.groups?.[0] // normalmente só existe 1
+
+  if (group === 'ADMIN') {
+    return baseMenu
+  }
+
+  if (group === 'Técnico') {
+    return baseMenu.filter(item =>
+      ['Home', 'Chamados', 'Monitoramento', 'Documentação']
+        .includes(item.label)
+    )
+  }
+
+  if (group === 'Cliente') {
+    return baseMenu.filter(item =>
+      ['Home', 'Chamados', 'Ativos', 'Ambientes', 'Documentação']
+        .includes(item.label)
+    )
+  }
+
+  // fallback (usuário sem grupo)
+  return baseMenu.filter(item => item.label === 'Home')
+})
+
 </script>
 
 <style scoped lang="scss">
