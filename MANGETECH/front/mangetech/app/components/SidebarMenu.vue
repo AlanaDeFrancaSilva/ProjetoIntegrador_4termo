@@ -46,47 +46,20 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
 import { getCurrentUser, logout } from '@/services/auth.services'
 import UserDropdown from '@/components/UserDropdown.vue'
 import UserProfileModal from '@/components/UserProfileModal.vue'
 import { useUserStore } from '@/stores/user'
 
-
 const showProfileModal = ref(false)
+const showDropdown = ref(false)
 const userStore = useUserStore()
 const router = useRouter()
-
-export interface User {
-  id: number
-  name: string
-  email: string
-  nif: string
-  phone?: string | null
-  is_staff: boolean
-  is_active: boolean
-  creation_date: string
-  groups: string[]  
-}
-
 const route = useRoute()
 
-
-const menuItems = [
-  { label: 'Home', path: '/inicio' },
-  { label: 'Chamados', path: '/tasks' },
-  { label: 'Técnicos', path: '/tecnicos' },
-  { label: 'Clientes', path: '/clientes' },
-  { label: 'Monitoramento', path: '/monitoramento' },
-  { label: 'Ativos', path: '/ativos' },
-  { label: 'Ambientes', path: '/ambientes' },
-  { label: 'Documentação', path: '/documentacao' },
-]
-
-
-const showDropdown = ref(false)
-
+// Funções de controle de dropdown
 function toggleDropdown() {
   showDropdown.value = !showDropdown.value
 }
@@ -105,67 +78,71 @@ onMounted(async () => {
   }
 })
 
-
+// Verifica se a rota está ativa
 function isActive(path: string) {
-  // usa startsWith para considerar sub-rotas (ex: /clientes/123)
   return route.path === path || route.path.startsWith(path + '/')
 }
 
 // Função de logout
 async function handleLogout() {
   try {
-    user.value = await getCurrentUser()
-    console.log("User logado:", user.value)
-  } catch (error: any) {
-    console.error('Erro ao carregar usuário:', error)
-    // opcional: redirecionar para login se necessário
-    // if (!localStorage.getItem('auth_token')) navigateTo('/login')
-  }
-})
-
-//Nivel de acesso itens menu
-const menuItems = computed(() => {
-  if (!user.value) return []
-
-  const group = user.value.groups?.[0] // normalmente só existe 1
-
-  if (group === 'ADMIN') {
-    return baseMenu
-  }
-
-  if (group === 'Técnico') {
-    return baseMenu.filter(item =>
-      ['Home', 'Chamados', 'Monitoramento', 'Documentação']
-        .includes(item.label)
-    )
-  }
-
-  if (group === 'Cliente') {
-    return baseMenu.filter(item =>
-      ['Home', 'Chamados', 'Ativos', 'Ambientes', 'Documentação']
-        .includes(item.label)
-    )
-  }
-
-  // fallback (usuário sem grupo)
-  return baseMenu.filter(item => item.label === 'Home')
-})
-    await logout() // Chama o logout do backend
-
-    // Remove token local
+    await logout()
     localStorage.removeItem('auth_token')
-
-    // Limpa o usuário do Pinia
     userStore.setUser(null)
-
-    // Redireciona para a tela de login
     router.push('/login')
   } catch (err) {
     console.error('Erro ao sair:', err)
   }
 }
 
+// Base de itens do menu
+const baseMenu = [
+  { label: 'Home', path: '/inicio' },
+  { label: 'Chamados', path: '/tasks' },
+  { label: 'Técnicos', path: '/tecnicos' },
+  { label: 'Clientes', path: '/clientes' },
+  { label: 'Monitoramento', path: '/monitoramento' },
+  { label: 'Ativos', path: '/ativos' },
+  { label: 'Ambientes', path: '/ambientes' },
+  { label: 'Documentação', path: '/documentacao' },
+]
+
+// Itens do menu filtrados por nível de acesso
+const menuItems = computed(() => {
+  const user = userStore.user
+  if (!user) return []
+
+  const group = user.groups?.[0]
+
+  if (group === 'ADMIN') return baseMenu
+  if (group === 'Técnico') {
+    return baseMenu.filter(item =>
+      ['Home', 'Chamados', 'Monitoramento', 'Documentação'].includes(item.label)
+    )
+  }
+  if (group === 'Cliente') {
+    return baseMenu.filter(item =>
+      ['Home', 'Chamados', 'Ativos', 'Ambientes', 'Documentação'].includes(item.label)
+    )
+  }
+
+  return baseMenu.filter(item => item.label === 'Home') // fallback (sem grupo reconhecido)
+})
+
+onMounted(async () => {
+  window.addEventListener('click', closeDropdown)
+
+  try {
+    await userStore.fetchUser()
+    console.log('Usuário carregado:', userStore.user)
+    console.log('Grupo:', userStore.user?.groups)
+  } catch (error: any) {
+    console.error('Erro ao carregar usuário:', error)
+  }
+})
+
 </script>
+
 
 <style scoped lang="scss">
 .sidebar {
