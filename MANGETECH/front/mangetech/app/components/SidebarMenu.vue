@@ -17,24 +17,46 @@
       </ul>
     </nav>
 
-    <div class="user-box" v-if="user">
-        <div class="user-info">
-            <div class="user-avatar">
-                <img src="@/assets/images/default-user-icon.jpg" alt="Avatar padrão" />
-            </div>
-            <div>
-                <p class="user-name">{{ user.name }}</p>
-                <p class="user-email">{{ user.email }}</p>
-            </div>
+    <div class="user-box" v-if="userStore.user">
+      <div class="user-info" @click.stop="toggleDropdown">
+        <div class="user-avatar">
+          <img src="@/assets/images/default-user-icon.jpg" alt="Avatar padrão" />
         </div>
+        <div>
+          <p class="user-name">{{ userStore.user?.name }}</p>
+          <p class="user-email">{{ userStore.user?.email }}</p>
+
+        </div>
+      </div>
+
+      <!-- Dropdown -->
+      <UserDropdown
+        v-if="showDropdown"
+        @logout="handleLogout"
+        @open-profile="showProfileModal = true"
+      />
+
+      <UserProfileModal 
+      v-if="showProfileModal" 
+      :user="userStore.user"
+      @close="showProfileModal = false" />
+
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
-import { ref, onMounted, computed } from 'vue'
-import { getCurrentUser } from '@/services/auth.services'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { getCurrentUser, logout } from '@/services/auth.services'
+import UserDropdown from '@/components/UserDropdown.vue'
+import UserProfileModal from '@/components/UserProfileModal.vue'
+import { useUserStore } from '@/stores/user'
+
+
+const showProfileModal = ref(false)
+const userStore = useUserStore()
+const router = useRouter()
 
 export interface User {
   id: number
@@ -50,7 +72,8 @@ export interface User {
 
 const route = useRoute()
 
-const baseMenu = [
+
+const menuItems = [
   { label: 'Home', path: '/inicio' },
   { label: 'Chamados', path: '/tasks' },
   { label: 'Técnicos', path: '/tecnicos' },
@@ -61,14 +84,35 @@ const baseMenu = [
   { label: 'Documentação', path: '/documentacao' },
 ]
 
-const user = ref<User | null>(null)
+
+const showDropdown = ref(false)
+
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value
+}
+
+function closeDropdown() {
+  showDropdown.value = false
+}
+
+onMounted(async () => {
+  window.addEventListener('click', closeDropdown)
+
+  try {
+    await userStore.fetchUser()
+  } catch (error: any) {
+    console.error('Erro ao carregar usuário:', error)
+  }
+})
+
 
 function isActive(path: string) {
   // usa startsWith para considerar sub-rotas (ex: /clientes/123)
   return route.path === path || route.path.startsWith(path + '/')
 }
 
-onMounted(async () => {
+// Função de logout
+async function handleLogout() {
   try {
     user.value = await getCurrentUser()
     console.log("User logado:", user.value)
@@ -106,6 +150,20 @@ const menuItems = computed(() => {
   // fallback (usuário sem grupo)
   return baseMenu.filter(item => item.label === 'Home')
 })
+    await logout() // Chama o logout do backend
+
+    // Remove token local
+    localStorage.removeItem('auth_token')
+
+    // Limpa o usuário do Pinia
+    userStore.setUser(null)
+
+    // Redireciona para a tela de login
+    router.push('/login')
+  } catch (err) {
+    console.error('Erro ao sair:', err)
+  }
+}
 
 </script>
 

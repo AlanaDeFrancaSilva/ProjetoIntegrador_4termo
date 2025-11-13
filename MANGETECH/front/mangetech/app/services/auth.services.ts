@@ -39,3 +39,15 @@ export const getCurrentUser = async (): Promise<User> => {
     },
   })
 }
+
+
+export const updateCurrentUser = async (data: any) => {
+  const token = localStorage.getItem('auth_token')
+
+  return useFetch('http://localhost:8001/api/auth/users/me/', {
+    method: 'PATCH',
+    headers: { Authorization: `Token ${token}` },
+    body: data,
+  })
+}
+

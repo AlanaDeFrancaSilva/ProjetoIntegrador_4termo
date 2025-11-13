@@ -14,7 +14,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'email', 'nif', 'phone', 'password', 'groups']
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop('password', None)
         user = CustomUser.objects.create_user(**validated_data, password=password)
         return user
 

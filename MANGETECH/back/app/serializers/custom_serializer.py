@@ -1,3 +1,19 @@
+# serializers/custom_user_serializer.py
+from rest_framework import serializers
+from ..models.custom_user import CustomUser
+
+class CustomUserWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        # Inclua todos os campos que podem ser alterados pelo usuário
+        fields = ['name', 'phone']
+
+class CustomUserReadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'name', 'nif', 'phone']
+
+
 class ReadWriteSerializer(object):
     read_serializer_class = None
     write_serializer_class = None
