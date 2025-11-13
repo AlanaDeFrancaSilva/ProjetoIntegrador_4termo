@@ -99,7 +99,7 @@ async function handleLogout() {
 const baseMenu = [
   { label: 'Home', path: '/inicio' },
   { label: 'Chamados', path: '/tasks' },
-  { label: 'Técnicos', path: '/tecnicos' },
+  { label: 'Técnicos', path: '/tecnico' },
   { label: 'Clientes', path: '/clientes' },
   { label: 'Monitoramento', path: '/monitoramento' },
   { label: 'Ativos', path: '/ativos' },
