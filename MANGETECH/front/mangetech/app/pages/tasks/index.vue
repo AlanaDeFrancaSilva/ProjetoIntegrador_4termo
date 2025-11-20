@@ -5,12 +5,15 @@ definePageMeta({
 
 import { ref, watch, onMounted } from 'vue'
 import { getTasks } from '~/services/task.services'
+import NewTaskModal from '~/components/NewTaskModal.vue'
 
 // Estado reativo
 const tasks = ref<any[]>([])
 const searchQuery = ref('')
 const statusFilter = ref('') // Todos, Alta, Média, Baixa
 const isLoading = ref(false)
+
+const showNewTaskModal = ref(false)
 
 // Mapeamento dos valores de urgência para português
 const urgencyMap = {
@@ -68,10 +71,15 @@ watch(searchQuery, () => {
       <!-- Botão Novo Chamado -->
       <button
         class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md transition"
-        @click="navigateTo('/chamados/novo')"
+        @click="showNewTaskModal = true"
       >
         + Novo Chamado
       </button>
+
+      <NewTaskModal
+        v-if="showNewTaskModal"
+        @close="showNewTaskModal = false"
+      />
 
       <!-- Campo de busca -->
       <div
