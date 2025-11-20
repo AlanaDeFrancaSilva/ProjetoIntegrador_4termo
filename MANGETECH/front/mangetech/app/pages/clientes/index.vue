@@ -20,6 +20,25 @@
       />
     </div>
 
+    <!-- Cards de resumo -->
+    <div class="cards-container">
+      <div class="card total">
+        <h3>Total de Clientes</h3>
+        <p>{{ totalClientes }}</p>
+      </div>
+
+      <div class="card ativos">
+        <h3>Clientes Ativos</h3>
+        <p>{{ clientesAtivos }}</p>
+      </div>
+
+      <div class="card inativos">
+        <h3>Clientes Inativos</h3>
+        <p>{{ clientesInativos }}</p>
+      </div>
+    </div>
+
+
     <table v-if="clientesFiltrados.length > 0">
       <thead>
         <tr>
@@ -74,12 +93,12 @@ const clientesFiltrados = computed(() => {
   const f = normalizar(filtro.value)
   if (!f) return clientes.value
 
-  return clientes.value.filter((cli: any) =>
-    normalizar(cli.name).includes(f) ||
-    normalizar(cli.email).includes(f) ||
-    normalizar(cli.nif || "").includes(f)
-  )
+  return clientes.value.filter((cli: any) => {
+    const nome = normalizar(cli.name || "")
+    return nome.includes(f)
+  })
 })
+
 
 // ░░░░░░ BUSCA DOS CLIENTES ░░░░░░
 onMounted(async () => {
@@ -95,6 +114,16 @@ onMounted(async () => {
     console.error("Erro ao buscar clientes:", error)
   }
 })
+
+// ░░░░░░ CARDS - TOTAL / ATIVOS / INATIVOS ░░░░░░
+const totalClientes = computed(() => clientes.value.length)
+const clientesAtivos = computed(() =>
+  clientes.value.filter((c: any) => c.is_active).length
+)
+const clientesInativos = computed(() =>
+  clientes.value.filter((c: any) => !c.is_active).length
+)
+
 
 // ░░░░░░ BOTÃO "NOVO CLIENTE" ░░░░░░
 const novoCliente = () => {
@@ -150,6 +179,60 @@ const novoCliente = () => {
     border-radius: 10px;
     border: 1px solid #d1d5db;
     font-size: 1rem;
+  }
+}
+
+/* ---------- Cards de resumo ---------- */
+.cards-container .card {
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* centraliza verticalmente */
+  align-items: flex-start;   /* mantém alinhado à esquerda */
+  padding-bottom: 10px;      /* opcional, para deixar mais bonito */
+}
+
+
+.cards-container {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 25px;
+
+  .card {
+    flex: 1;
+    background: #fff;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #475569;
+      margin-top: 8px;
+    }
+
+    p {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #0f172a;
+    }
+  }
+
+  .total {
+    border-left: 5px solid #1e3a8a;
+  }
+
+  .ativos {
+    border-left: 5px solid #047857;
+  }
+
+  .inativos {
+    border-left: 5px solid #b91c1c;
   }
 }
 
