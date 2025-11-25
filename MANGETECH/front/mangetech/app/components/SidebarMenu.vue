@@ -102,7 +102,7 @@ const baseMenu = [
   { label: 'Técnicos', path: '/tecnico' },
   { label: 'Clientes', path: '/clientes' },
   { label: 'Monitoramento', path: '/monitoramento' },
-  { label: 'Ativos', path: '/ativos' },
+  { label: 'Ativos', path: '/equipments' },
   { label: 'Ambientes', path: '/ambientes' },
   { label: 'Documentação', path: '/documentacao' },
 ]
