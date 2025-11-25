@@ -1,18 +1,19 @@
 <template>
   <section class="clientes-page">
+    
+    <!-- Cabeçalho -->
     <div class="header-bar">
       <div>
-        <h1>Clientes</h1>
-        <h4>Gerencie seus clientes e informações de contato</h4>
+        <h1 class="page-title">Clientes</h1>
+        <p class="page-subtitle">Gerencie seus clientes e informações de contato</p>
       </div>
 
-      <button class="btn-novo" @click="novoCliente">
-        + Novo Cliente
-      </button>
+      <button class="btn-novo" @click="novoCliente">+ Novo Cliente</button>
     </div>
 
     <!-- Barra de Pesquisa -->
     <div class="search-box">
+      <span class="search-icon">🔍</span>
       <input
         type="text"
         v-model="filtro"
@@ -20,7 +21,7 @@
       />
     </div>
 
-    <!-- Cards de resumo -->
+    <!-- Cards resumo -->
     <div class="cards-container">
       <div class="card total">
         <h3>Total de Clientes</h3>
@@ -38,8 +39,8 @@
       </div>
     </div>
 
-
-    <table v-if="clientesFiltrados.length > 0">
+    <!-- Tabela -->
+    <table v-if="clientesFiltrados.length > 0" class="table-clientes">
       <thead>
         <tr>
           <th>Nome</th>
@@ -57,12 +58,7 @@
           <td>{{ cli.email }}</td>
           <td>{{ cli.tasks_created }}</td>
           <td>
-            <span
-              :class="{
-                ativo: cli.is_active,
-                inativo: !cli.is_active
-              }"
-            >
+            <span :class="cli.is_active ? 'ativo' : 'inativo'">
               {{ cli.is_active ? 'Ativo' : 'Inativo' }}
             </span>
           </td>
@@ -70,9 +66,10 @@
       </tbody>
     </table>
 
-    <p v-else>Nenhum cliente encontrado.</p>
+    <p v-else class="empty-message">Nenhum cliente encontrado.</p>
   </section>
 </template>
+
 
 <script setup lang="ts">
 definePageMeta({
@@ -133,164 +130,158 @@ const novoCliente = () => {
 </script>
 
 <style scoped lang="scss">
-.clientes-page {
-  h1 {
-    font-size: 1.8rem;
-    margin-bottom: 5px;
-    color: #1e293b;
-  }
-
-  h4 {
-    color: #64748b;
-    margin-bottom: 20px;
-  }
+/* ======= TÍTULOS ======= */
+.page-title {
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin-bottom: 4px;
 }
 
-/* ---------- Header com botão ---------- */
+.page-subtitle {
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+/* ======= HEADER COM BOTÃO ======= */
 .header-bar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
-/* ---------- Botão "+ Novo Cliente" ---------- */
 .btn-novo {
-  background-color: #1e1b4b;
+  background-color: #1e3a8a;
   color: white;
-  padding: 10px 18px;
+  padding: 10px 20px;
   border-radius: 8px;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  transition: 0.2s;
+  transition: 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    background-color: #312e81;
+    background-color: #16224f;
   }
 }
 
-/* ---------- Barra de pesquisa ---------- */
+/* ======= BARRA DE PESQUISA ======= */
 .search-box {
-  margin: 20px 0;
-
-  input {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 10px;
-    border: 1px solid #d1d5db;
-    font-size: 1rem;
-  }
+  position: relative;
+  margin-bottom: 25px;
 }
 
-/* ---------- Cards de resumo ---------- */
-.cards-container .card {
-  height: 120px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;   /* centraliza verticalmente */
-  align-items: flex-start;   /* mantém alinhado à esquerda */
-  padding-bottom: 10px;      /* opcional, para deixar mais bonito */
+.search-box input {
+  width: 100%;
+  padding: 12px 14px 12px 40px;
+  border: 1px solid #dadce0;
+  border-radius: 10px;
+  font-size: 1rem;
+  outline: none;
+  transition: 0.3s;
 }
 
+.search-box input:focus {
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.2);
+}
 
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+}
+
+/* ======= CARDS RESUMO ======= */
 .cards-container {
   display: flex;
   gap: 20px;
   margin-bottom: 25px;
-
-  .card {
-    flex: 1;
-    background: #fff;
-    padding: 18px;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-
-
-    h3 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #475569;
-      margin-top: 8px;
-    }
-
-    p {
-      font-size: 1.8rem;
-      font-weight: bold;
-      color: #0f172a;
-    }
-  }
-
-  .total {
-    border-left: 5px solid #1e3a8a;
-  }
-
-  .ativos {
-    border-left: 5px solid #047857;
-  }
-
-  .inativos {
-    border-left: 5px solid #b91c1c;
-  }
 }
 
-/* ---------- Tabela ---------- */
-table {
+.card {
+  flex: 1;
+  background: #fff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+
+  h3 {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+
+  p {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  &.total { border-left: 5px solid #1e3a8a; }
+  &.ativos { border-left: 5px solid #047857; }
+  &.inativos { border-left: 5px solid #b91c1c; }
+}
+
+/* ======= TABELA ======= */
+.table-clientes {
   width: 100%;
   border-collapse: collapse;
-  background-color: #ffffff;
+  background: #fff;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-
-  thead {
-    background-color: #f3f4f6;
-
-    th {
-      text-align: left;
-      padding: 12px 16px;
-      font-weight: 600;
-      color: #1f2937;
-      font-size: 0.95rem;
-    }
-  }
-
-  tbody {
-    tr {
-      border-bottom: 1px solid #e5e7eb;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      td {
-        padding: 12px 16px;
-        color: #374151;
-        font-size: 0.95rem;
-      }
-    }
-
-    tr:hover {
-      background-color: #f9fafb;
-    }
-  }
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* ---------- Status ---------- */
+.table-clientes thead {
+  background: #f8fafc;
+}
+
+.table-clientes th {
+  padding: 14px;
+  text-align: left;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.table-clientes td {
+  padding: 14px;
+  color: #374151;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-clientes tr:hover {
+  background-color: #f9fafb;
+}
+
+/* ======= BADGES DE STATUS ======= */
 span.ativo {
-  background-color: #d1fae5;
+  background: #d1fae5;
   color: #065f46;
-  border-radius: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
   font-weight: 600;
 }
+
 span.inativo {
-  background-color: #fee2e2;
+  background: #fee2e2;
   color: #991b1b;
-  border-radius: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
   font-weight: 600;
 }
+
+/* ======= NENHUM CLIENTE ======= */
+.empty-message {
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
 </style>

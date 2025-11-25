@@ -1,6 +1,25 @@
-html,body{
-    width: 100%;
-    height: auto;
-    box-sizing: border-box;
-    font-family: 'Varela Round', Roboto;
+/* RESET PADRÃO - Remove margens, paddings e garante consistência global */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  font-family: 'Inter', sans-serif;
+  background-color: #f4f6f9; // Fundo padrão aplicável a todas as telas
+}
+
+/* Remove rolagem visual quando conteúdo é menor que a tela */
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }

@@ -7,38 +7,32 @@ import { ref, watch, onMounted } from 'vue'
 import { getTasks } from '~/services/task.services'
 import NewTaskModal from '~/components/NewTaskModal.vue'
 
-// Estado reativo
 const tasks = ref<any[]>([])
 const searchQuery = ref('')
-const statusFilter = ref('') // Todos, Alta, Média, Baixa
+const statusFilter = ref('')
 const isLoading = ref(false)
-
 const showNewTaskModal = ref(false)
 
-// Mapeamento dos valores de urgência para português
-const urgencyMap = {
+const urgencyMap: Record<string, string> = {
   LOW: 'Baixa',
   MEDIUM: 'Média',
   HIGH: 'Alta',
-  EXTRA_HIGH: 'Extra Alta',  // Se você tiver esse nível extra de urgência
+  EXTRA_HIGH: 'ExtraAlta',
 }
 
-// Função de busca
 const fetchTasks = async () => {
   try {
     isLoading.value = true
     const params: Record<string, any> = {}
 
-    if (searchQuery.value) {
-      // Busca por nome
-      params.name = searchQuery.value
-    }
+    if (searchQuery.value) params.name = searchQuery.value
 
     if (statusFilter.value && statusFilter.value !== 'Todos') {
       const urgencyMapRev: Record<string, string> = {
         Baixa: 'LOW',
         Média: 'MEDIUM',
         Alta: 'HIGH',
+        ExtraAlta: 'EXTRA_HIGH',
       }
       params.urgency_level = urgencyMapRev[statusFilter.value]
     }
@@ -52,209 +46,245 @@ const fetchTasks = async () => {
   }
 }
 
-// Busca inicial
 onMounted(fetchTasks)
-
-// Recarregar ao digitar
-watch(searchQuery, () => {
-  fetchTasks()
-})
+watch(searchQuery, fetchTasks)
 </script>
 
 <template>
-  <div>
-    <h1>Chamados</h1>
-    <h3>Gerencie ordens de serviço com controle completo</h3>
+  <div class="page-container">
 
-    <!-- Barra de ações -->
-    <div class="flex flex-wrap items-center gap-4 mb-6 mt-4">
-      <!-- Botão Novo Chamado -->
-      <button
-        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md transition"
-        @click="showNewTaskModal = true"
-      >
-        + Novo Chamado
-      </button>
+    <!-- Cabeçalho -->
+    <div class="header">
+      <h1>Chamados</h1>
+      <p>Gerencie ordens de serviço com controle completo</p>
+    </div>
 
-      <NewTaskModal
-        v-if="showNewTaskModal"
-        @close="showNewTaskModal = false"
-      />
-
-      <!-- Campo de busca -->
-      <div
-        class="flex items-center border border-gray-300 rounded-md overflow-hidden w-full max-w-sm"
-      >
+    <!-- 🔎 Barra de Pesquisa, Novo Chamado e Filtro -->
+    <div class="actions-bar">
+      <div class="search-box">
+        <span class="icon-search">🔍</span>
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Pesquisar..."
-          class="flex-1 px-3 py-2 outline-none"
+          placeholder="Buscar por título"
         />
-        <button
-          class="bg-gray-100 px-3 hover:bg-gray-200 transition"
-          @click="fetchTasks"
-        >
-          🔍
-        </button>
       </div>
 
-      <!-- Botão de Status -->
-      <div class="relative">
-        <select
-          v-model="statusFilter"
-          @change="fetchTasks"
-          class="border border-gray-300 px-4 py-2 rounded-md text-gray-700"
-        >
-          <option value="Todos">Todos os Status</option>
+      <div class="actions-buttons">
+        <button class="btn-primary" @click="showNewTaskModal = true">
+          + Novo Chamado
+        </button>
+
+        <select v-model="statusFilter" @change="fetchTasks" class="select-filter">
+          <option value="Todos">Todas as Urgências</option>
           <option value="Baixa">Baixa</option>
           <option value="Média">Média</option>
           <option value="Alta">Alta</option>
+          <option value="ExtraAlta">Extra Alta</option>
         </select>
       </div>
     </div>
 
-    <!-- Tabela -->
-    <table v-if="!isLoading">
-      <thead>
-        <tr>
-          <th>ID Chamado</th>
-          <th>Solicitante</th>
-          <th>Título</th>
-          <th>Descrição</th>
-          <th>Data de Abertura</th>
-          <th>Urgência</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(task, index) in tasks" :key="index">
-          <td>{{ task.id }}</td>
-          <td>{{ task.creator_FK.name }}</td>
-          <td>{{ task.name }}</td>
-          <td>{{ task.description }}</td>
-          <td>{{ task.creation_date }}</td>
-          <td :class="{
-            'Baixa': task.urgency_level === 'LOW',
-            'Média': task.urgency_level === 'MEDIUM',
-            'Alta': task.urgency_level === 'HIGH',
-            'ExtraAlta': task.urgency_level === 'EXTRA_HIGH'
-          }">
-            {{ urgencyMap[task.urgency_level] || task.urgency_level }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <NewTaskModal v-if="showNewTaskModal" @close="showNewTaskModal = false" />
 
-    <div v-else class="text-gray-500 mt-4">Carregando...</div>
+    <!-- Tabela -->
+    <div v-if="!isLoading" class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Solicitante</th>
+            <th>Título</th>
+            <th>Descrição</th>
+            <th>Data de Abertura</th>
+            <th>Urgência</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(task, index) in tasks" :key="index">
+            <td>{{ task.id }}</td>
+            <td>{{ task.creator_FK?.name || '—' }}</td>
+            <td>{{ task.name }}</td>
+            <td>{{ task.description }}</td>
+            <td>{{ task.creation_date }}</td>
+            <td>
+              <span :class="['status-badge', urgencyMap[task.urgency_level]]">
+                {{ urgencyMap[task.urgency_level] }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Loading -->
+    <div v-else class="loading">
+      <span>⏳</span> Carregando chamados...
+    </div>
+
   </div>
 </template>
 
 <style scoped lang="scss">
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #ffffff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-
-  thead {
-    background-color: #f3f4f6;
-    
-    th {
-      text-align: left;
-      padding: 12px 16px;
-      font-weight: 600;
-      color: #1f2937;
-      font-size: 0.95rem;
-    }
-  }
-
-  tbody {
-    tr {
-      border-bottom: 1px solid #e5e7eb;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      td {
-        padding: 12px 16px;
-        color: #374151;
-        font-size: 0.95rem;
-
-        &:nth-child(6) { // coluna de Urgência
-          font-weight: 600;
-          text-align: center;
-
-          &.Baixa {
-            background-color: #d1fae5;
-            color: #065f46;
-            border-radius: 6px;
-            padding: 4px 8px;
-          }
-
-          &.Média {
-            background-color: #fef3c7;
-            color: #78350f;
-            border-radius: 6px;
-            padding: 4px 8px;
-          }
-
-          &.Alta {
-            background-color: #fee2e2;
-            color: #991b1b;
-            border-radius: 6px;
-            padding: 4px 8px;
-          }
-
-          &.ExtraAlta { 
-            background-color: #fef2f2; 
-            color: #990000;              
-            border-radius: 6px; 
-            padding: 4px 8px; 
-          }
-        }
-      }
-    }
-
-    tr:hover {
-      background-color: #f9fafb;
-    }
-  }
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-/* Responsividade */
-@media (max-width: 900px) {
-  table, thead, tbody, th, td, tr {
-    display: block;
-  }
+.header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1f2937;
+}
 
-  thead {
-    display: none;
-  }
+.header p {
+  color: #6b7280;
+  font-size: 14px;
+}
 
-  tbody tr {
-    margin-bottom: 16px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 12px;
-  }
+/* 📌 CONTAINER PRINCIPAL DE AÇÕES */
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
 
-  tbody td {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 12px;
+/* 🔎 Campo de busca */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  flex: 1;
+  max-width: 650px;
+  background: #f9fafb;
+  border: 1px solid #ced4da;
+  border-radius: 30px;
+  transition: all 0.3s ease;
+}
 
-    &::before {
-      content: attr(data-label);
-      font-weight: 600;
-      color: #6b7280;
-    }
+.search-box:hover,
+.search-box:focus-within {
+  border-color: #1e293b;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
 
-    &:nth-child(6) {
-      justify-content: flex-start;
-    }
-  }
+.search-box input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+}
+
+.icon-search {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 🎯 Botões e filtro */
+.actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-primary {
+  padding: 8px 16px;
+  background-color:#1e293b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #172554;
+}
+
+.select-filter {
+  appearance: none;
+  background-color: #ffffff !important;
+  color: #333;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.select-filter:focus {
+  outline: none;
+  border-color:#1e293b;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #333;
+}
+.select-filter:hover,
+.select-filter:focus {
+  border-color: #1e293b;
+}
+
+/* 📋 Tabela */
+.table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+.data-table thead {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.data-table th,
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  font-size: 14px;
+}
+
+/* 🔵 Badges de urgência */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-block;
+  text-align: center;
+}
+
+.Baixa { background-color: #d1fae5; color: #065f46; }
+.Média { background-color: #fef3c7; color: #78350f; }
+.Alta { background-color: #fee2e2; color: #991b1b; }
+.ExtraAlta { background-color: #fecaca; color: #7f1d1d; }
+
+/* 🌀 Loading */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
 }
 </style>

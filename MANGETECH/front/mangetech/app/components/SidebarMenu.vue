@@ -145,83 +145,151 @@ onMounted(async () => {
 
 
 <style scoped lang="scss">
+/* ======= SIDEBAR DESIGN PREMIUM ======= */
 .sidebar {
   width: 250px;
-  background-color: #0d1323;
+  background: linear-gradient(180deg, #0d1323, #0a0f1c);
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: space-between; /* 🔥 mantém menu em cima e user-info visível */
   padding: 30px 0;
+  min-height: 100vh;
+}
 
-  .logo img {
+
+/* ===== LOGO ===== */
+.logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+
+  img {
     width: 150px;
-    margin-bottom: 25px;
-  }
-
-  .menu ul {
-    list-style: none;
-    padding: 0;
-
-    li {
-      padding: 12px 0;
-
-      a {
-        font-weight: 500;
-        color: #b3b3b3;
-        text-decoration: none;
-        transition: color 0.3s;
-        display: block;
-
-        &.active,
-        &:hover {
-          color: #1e40af;
-        }
-      }
-    }
-  }
-
-  .user-box {
-    margin-top: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Centraliza horizontalmente */
-    justify-content: center; /* Centraliza verticalmente (caso precise) */
-    gap: 8px; /* Espaço entre avatar e textos */
-    padding-bottom: 20px; /* Dá um respiro do fim da sidebar */
-    font-size: 0.9rem;
-
-  .user-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .user-avatar {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid #1e40af;
-    background-color: #1e293b;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  }
-
-  .user-name {
-    font-weight: 600;
-  }
-
-  .user-email {
-    color: #888;
+    filter: brightness(1.15);
   }
 }
 
+/* ===== MENU ===== */
+.menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* ITEM DO MENU */
+.menu ul li {
+  margin-bottom: 6px;
+}
+
+/* LINKS DO MENU */
+.menu ul li a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #9ca3af;
+  text-decoration: none;
+  border-radius: 10px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* efeito de luz ao passar o mouse */
+.menu ul li a:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
+/* ITEM ATIVO */
+.menu ul li a.active {
+  background: linear-gradient(90deg, #3730a3, #4f46e5);
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  font-weight: 600;
+}
+
+/* ===== USER BOX ===== */
+.user-box {
+  margin-top: auto;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.user-box:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* AVATAR */
+.user-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #3b82f6;
+  background-color: #1e293b;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* TEXTOS DO USUÁRIO */
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.user-email {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+/* ===== RESPONSIVIDADE ===== */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 220px;
+  }
+
+  .menu ul li a {
+    font-size: 0.9rem;
+    padding: 0.7rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 1rem;
+  }
+
+  .menu ul {
+    display: flex;
+    gap: 14px;
+  }
+
+  .user-box {
+    margin-top: 0;
+    padding: 0.5rem;
+  }
 }
 </style>
