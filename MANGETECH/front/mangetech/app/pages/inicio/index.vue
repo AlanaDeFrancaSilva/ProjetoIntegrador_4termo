@@ -1,178 +1,246 @@
 <template>
   <div class="dashboard-container">
     <main class="main-content">
-      <div class="cards-grid">
 
-        <!-- Card de Sales -->
-        <div class="card sales-card">
-          <h3>Sales Activity</h3>
-          <p class="value">$8954.57</p>
-          <p class="change">↑ 15%</p>
+      <!-- GRID SUPERIOR -->
+      <div class="top-cards">
+        <div class="card chamados-card">
+          <h3>Total de Chamados</h3>
+          <p class="value">{{ totalChamados }}</p>
+          <p class="subtitle">Registrados no sistema</p>
         </div>
 
-        <!-- Card do Mapa -->
         <div class="card map-card">
-          <img src="@/assets/images/map.png" alt="Mapa de estatísticas" />
+          <img :src="mapBrasil" class="map-image" alt="Mapa do Brasil" />
         </div>
-
-        <!-- Banner Promocional -->
-        <div class="card promo-card">
-          <div class="text">
-            <h2>
-              SUA CENTRAL DE CHAMADOS <span>RÁPIDA</span> E ORGANIZADA
-            </h2>
-          </div>
-          <div class="phone">
-            <img src="@/assets/images/telateste1.png" alt="App Cage Systems" />
-          </div>
-        </div>
-
       </div>
+
+      <!-- BANNER CARROSSEL -->
+      <div class="card promo-carousel">
+        <div v-for="(slide, index) in slides"
+             :key="index"
+             class="carousel-slide"
+             :class="{ active: index === currentSlide }">
+
+          <div class="text">
+            <h2>{{ slide.title }} <span>{{ slide.highlight }}</span></h2>
+          </div>
+          <div class="device">
+            <img :src="slide.image" />
+          </div>
+        </div>
+
+        <div class="carousel-indicators">
+          <span v-for="(slide, index) in slides"
+                :key="index"
+                @click="currentSlide = index"
+                :class="{ active: index === currentSlide }"></span>
+        </div>
+      </div>
+
     </main>
   </div>
 </template>
 
+
 <script setup lang="ts">
-definePageMeta({
-  layout: 'dashboard-layout'
+definePageMeta({ layout: 'dashboard-layout' })
+
+import { ref, onMounted, onUnmounted } from 'vue'
+
+// Imagens
+import mapBrasil from '@/assets/images/map.png'
+import celularImage from '@/assets/images/telateste1.png'
+import computadorImage from '@/assets/images/comp.png'
+
+const totalChamados = ref(235)
+
+const slides = ref([
+  { title: "SUA CENTRAL DE CHAMADOS", highlight: "RÁPIDA", image: celularImage },
+  { title: "ORGANIZAÇÃO EM QUALQUER LUGAR", highlight: "INTELIGENTE", image: computadorImage }
+])
+
+const currentSlide = ref(0)
+let intervalId: any = null
+
+onMounted(() => {
+  intervalId = setInterval(() => {
+    currentSlide.value = (currentSlide.value + 1) % slides.value.length
+  }, 5000)
 })
+
+onUnmounted(() => clearInterval(intervalId))
 </script>
 
+
 <style scoped lang="scss">
-/* ========= LAYOUT GLOBAL ========= */
 .dashboard-container {
   display: flex;
   min-height: 100vh;
-  background-color: #f4f6f9;
+  background: #f4f6fa;
+  font-family: 'Inter', sans-serif;
 }
 
 .main-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 2.5rem 3.5rem;
+  padding: 2.2rem 3rem;
 }
 
-/* ======== GRID DOS CARDS ======== */
-.cards-grid {
+/* GRID SUPERIOR */
+.top-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 28px;
-  margin-top: 10px;
-  align-content: flex-start;
+  margin-bottom: 32px;
 }
 
-/* ======== CARD PADRÃO ======== */
+/* CARD BASE */
 .card {
-  background: rgba(15, 23, 42, 0.85);
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0px 6px 22px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* CARD TOTAL CHAMADOS */
+.chamados-card {
+  background:  #1e293b;
+  color: #f1f5f9;
+  text-align: center;
+  padding: 40px;
+  border-radius: 24px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.22), inset 0 0 18px rgba(255,255,255,0.04);
   backdrop-filter: blur(6px);
-  border-radius: 22px;
-  padding: 26px;
-  min-height: 220px;
+  position: relative;
+  overflow: hidden;
+
+  /* 🔹 Centralização absoluta */
   display: flex;
   flex-direction: column;
   justify-content: center;
-  color: #f9fafb;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  transition: transform 0.35s ease, box-shadow 0.35s ease;
-}
+  align-items: center;
 
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 14px 45px rgba(0, 0, 0, 0.5);
-}
+  min-height: 220px; /* garante altura boa */
+  
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+    margin-bottom: 10px;
+  }
 
-/* ======== SALES CARD ======== */
-.sales-card {
-  background: linear-gradient(135deg, #2f3cb4, #1d286b, #182245);
-}
+  .value {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin: 8px 0;
+    color: #ffffff;
+    letter-spacing: -1px;
+    text-shadow: 0 3px 10px rgba(0,0,0,0.4);
+  }
 
-.sales-card .value {
-  font-size: 2.4rem;
-  font-weight: 800;
+  .subtitle {
+    font-size: 0.95rem;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
 }
-
-.sales-card .change {
-  font-size: 0.9rem;
-  color: #22c55e;
-  font-weight: 600;
-}
-
-/* ======== MAP CARD ======== */
+/* MAPA CARD */
 .map-card {
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 18px;
+  min-height: 230px;
+  border-radius: 22px;
+
+  .map-image {
+    max-width: 85%;
+    opacity: 0.9;
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.15));
+    transition: transform 0.3s ease;
+  }
+
+  &:hover .map-image {
+    transform: scale(1.03);
+  }
 }
 
-.map-card img {
-  max-width: 100%;
-  max-height: 210px;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
-}
-
-/* ======== PROMO BANNER ======== */
-.promo-card {
-  grid-column: span 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: linear-gradient(120deg, #020617, #0e1529, #111827);
-  border-radius: 20px;
-  padding: 36px 48px;
-  min-height: 230px; /* 🔥 antes estava 330px */
+/* CARROSSEL CARD GRANDE */
+.promo-carousel {
+  margin-top: 15px;
+  border-radius: 24px;
+  height: 340px; /* 🔥 AUMENTADO */
+  position: relative;
   overflow: hidden;
-}
-/* Texto compacto e alinhado */
-.promo-card .text h2 {
-  font-size: 1.8rem; /* 🔥 Reduzi para não ficar exagerado */
-  font-weight: 700;
-  line-height: 1.3;
-  color: #f9fafb;
-  max-width: 450px;
+  background:  #1e293b;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.18);
 }
 
-.promo-card .text span {
-  color: #4f7df3;
-}
-
-/* Mockup do celular ajustado e alinhado elegante */
-.promo-card .phone {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
-}
-
-.promo-card .phone img {
-  max-width: 360px; /* 🔥 antes estava 480px */
+/* CARROSSEL ANIMAÇÕES */
+.carousel-slide {
+  position: absolute;
   width: 100%;
-  transform: translateY(10px);
-  filter: drop-shadow(0 10px 28px rgba(0,0,0,0.6));
-  transition: transform 0.3s ease;
-}
+  height: 100%;
+  display: flex;
+  padding: 50px 60px;
+  justify-content: space-between;
+  align-items: center;
+  opacity: 0;
+  transform: translateX(60px);
+  transition: all 0.8s ease;
 
-.promo-card .phone img:hover {
-  transform: translateY(10px) scale(1.02);
-}
-
-/* ======== RESPONSIVIDADE ======== */
-@media (max-width: 900px) {
-  .promo-card {
-    flex-direction: column;
-    text-align: center;
-    padding: 28px;
-    min-height: 200px;
+  &.active {
+    opacity: 1;
+    transform: translateX(0);
   }
 
-  .promo-card .phone img {
-    max-width: 220px;
-    transform: translateY(0);
+  .text h2 {
+    font-size: 2.3rem;
+    font-weight: 700;
+    color: white;
+    max-width: 500px;
   }
 
-  .promo-card .text h2 {
-    font-size: 1.5rem;
+  span {
+    color: #4f7df3;
+  }
+
+  .device img {
+    max-width: 380px;
+     transform: translateY(-30px);
+    filter: drop-shadow(0 12px 32px rgba(0,0,0,0.6));
   }
 }
+
+/* INDICADORES */
+.carousel-indicators {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+
+  span {
+    width: 12px;
+    height: 12px;
+    background: #64748b;
+    border-radius: 50%;
+    transition: 0.3s ease;
+    cursor: pointer;
+
+    &.active {
+      background: white;
+      transform: scale(1.2);
+    }
+  }
+}
+
 </style>

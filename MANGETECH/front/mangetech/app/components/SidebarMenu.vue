@@ -146,26 +146,26 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 /* ======= SIDEBAR DESIGN PREMIUM ======= */
+/* ======= SIDEBAR PREMIUM ======= */
 .sidebar {
   width: 250px;
-  background: linear-gradient(180deg, #0d1323, #0a0f1c);
+  background: linear-gradient(180deg, #0b0f1a, #0d1224); /* 🔥 Mais elegante */
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* 🔥 mantém menu em cima e user-info visível */
-  padding: 30px 0;
+  padding: 32px 0;
   min-height: 100vh;
+  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.35); /* Sombra lateral premium */
 }
-
 
 /* ===== LOGO ===== */
 .logo {
   display: flex;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.2rem;
 
   img {
-    width: 150px;
-    filter: brightness(1.15);
+    width: 160px;
+    filter: brightness(1.2);
   }
 }
 
@@ -176,45 +176,39 @@ onMounted(async () => {
   margin: 0;
 }
 
-/* ITEM DO MENU */
 .menu ul li {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-/* LINKS DO MENU */
 .menu ul li a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0.8rem 1rem;
+  display: block;
+  padding: 0.85rem 1rem;
   font-size: 0.95rem;
   font-weight: 500;
-  color: #9ca3af;
+  color: #a7b3c9;
   text-decoration: none;
-  border-radius: 10px;
-  position: relative;
+  border-radius: 12px;
   transition: all 0.3s ease;
 }
 
-/* efeito de luz ao passar o mouse */
+/* Hover elegante */
 .menu ul li a:hover {
-  background: rgba(99, 102, 241, 0.08);
-  color: #ffffff;
-  transform: translateX(4px);
+  background: rgba(88, 92, 255, 0.1);
+  color: white;
+  transform: translateX(6px);
 }
 
-/* ITEM ATIVO */
+/* Ativo */
 .menu ul li a.active {
-  background: linear-gradient(90deg, #3730a3, #4f46e5);
+  background: linear-gradient(90deg, #3740a3, #4e52d9);
   color: white !important;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
-  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(78, 82, 217, 0.45);
 }
 
 /* ===== USER BOX ===== */
 .user-box {
   margin-top: auto;
-  padding: 1rem;
+  padding: 0.8rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 14px;
   display: flex;
@@ -222,42 +216,48 @@ onMounted(async () => {
   gap: 14px;
   cursor: pointer;
   transition: 0.3s ease;
+  margin: 0 1rem;
 }
 
+/* Hover mais refinado */
 .user-box:hover {
   background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 }
 
-/* AVATAR */
+/* Avatar */
 .user-avatar {
-  width: 45px;
-  height: 45px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid #3b82f6;
-  background-color: #1e293b;
+  border: 2px solid #1f2937;
+  background: transparent; /* 🔥 remove fundo cinza total */
 }
 
 .user-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  filter: none; /* Sem filtros cinzas */
 }
 
-/* TEXTOS DO USUÁRIO */
+/* Informações do usuário */
 .user-info {
   display: flex;
   flex-direction: column;
+  line-height: 1.2;
 }
 
 .user-name {
   font-weight: 600;
   color: #ffffff;
+  font-size: 0.95rem;
 }
 
 .user-email {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: #9ca3af;
 }
 
 /* ===== RESPONSIVIDADE ===== */
@@ -277,7 +277,6 @@ onMounted(async () => {
     width: 100%;
     min-height: auto;
     flex-direction: row;
-    align-items: center;
     justify-content: space-between;
     padding: 0.8rem 1rem;
   }
@@ -292,4 +291,5 @@ onMounted(async () => {
     padding: 0.5rem;
   }
 }
+
 </style>
