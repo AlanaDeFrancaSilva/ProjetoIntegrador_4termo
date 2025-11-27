@@ -1,14 +1,13 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'dashboard-layout'
-})
+definePageMeta({ layout: 'dashboard-layout' })
 
 import { ref, watch, onMounted } from 'vue'
-import { getTasks, createTask } from '~/services/task.services'
+import { getTasks, createTask, updateTask } from '~/services/task.services'
 import { getUsers } from '~/services/user.service'
-import NewTaskModal from '~/components/NewTaskModal.vue'
 import { getEquipments } from '~/services/equipment.services'
 import { getUrgencyLevels } from '~/services/urgency.services'
+import NewTaskModal from '~/components/NewTaskModal.vue'
+import TaskDetailsModal from '~/components/TaskDetailsModal.vue'
 
 const tasks = ref<any[]>([])
 const searchQuery = ref('')
@@ -20,48 +19,61 @@ const usersList = ref<any[]>([])
 const equipmentList = ref<any[]>([])
 const urgencyOptions = ref<any[]>([])
 
+const selectedTask = ref<any | null>(null)
+const showTaskDetailsModal = ref(false)
+
+// 🔹 Mapa dos status
+const formatStatus = (status: string) => {
+  const map: Record<string, string> = {
+    ABERTO: 'Aberto',
+    EM_ANDAMENTO: 'Em Andamento',
+    CONCLUIDO: 'Concluído',
+    CANCELADO: 'Cancelado'
+  }
+  return map[status] || status || 'Sem Status'
+}
+
+// 🔹 Mapa das urgências
+const formatUrgency = (level: string) => {
+  const map: Record<string, string> = {
+    LOW: 'Baixa',
+    MEDIUM: 'Média',
+    HIGH: 'Alta',
+    EXTRA_HIGH: 'Extra Alta',
+  }
+  return map[level] || level
+}
+
+// 🔹 Buscar dados auxiliares
 const fetchUsers = async () => {
   const data = await getUsers()
-  console.log('Usuários recebidos:', data)
   usersList.value = data.results || data || []
 }
 
 const fetchEquipments = async () => {
   equipmentList.value = await getEquipments()
-  console.log('Equipamentos recebidos:', equipmentList.value)
 }
 
 const fetchUrgencyLevels = async () => {
   const data = await getUrgencyLevels()
-  console.log('Urgências recebidas:', data)
-
-  urgencyOptions.value = data.map((item: any) => ({
+  const urgencyData = Array.isArray(data) ? data : data.results || []
+  urgencyOptions.value = urgencyData.map((item: any) => ({
     value: item.value,
-    label: item.label.toUpperCase().replace('_', ' ')
+    label: formatUrgency(item.value)
   }))
 }
 
-
-
+// 🔹 Buscar chamados com filtro de status
 const fetchTasks = async () => {
   try {
     isLoading.value = true
     const params: Record<string, any> = {}
 
     if (searchQuery.value) params.name = searchQuery.value
-
-    if (statusFilter.value && statusFilter.value !== 'Todos') {
-      const urgencyMapRev: Record<string, string> = {
-        Baixa: 'LOW',
-        Média: 'MEDIUM',
-        Alta: 'HIGH',
-        ExtraAlta: 'EXTRA_HIGH',
-      }
-      params.urgency_level = urgencyMapRev[statusFilter.value]
-    }
+    if (statusFilter.value) params.task_status = statusFilter.value
 
     const { data } = await getTasks(params)
-    tasks.value = data.value?.results || []
+    tasks.value = data.value?.results || data.results || data || []
   } catch (err) {
     console.error('Erro ao buscar tasks:', err)
   } finally {
@@ -69,69 +81,68 @@ const fetchTasks = async () => {
   }
 }
 
-// 🔹 FUNÇÃO PRINCIPAL PARA SALVAR UMA NOVA TASK
-const handleSave = async (newTaskData: any) => {
-  try {
-    await createTask(newTaskData) // Envia para o backend
-    await fetchTasks()            // Atualiza a lista automaticamente
-    showNewTaskModal.value = false // Fecha o modal
-  } catch (err) {
-    console.error('Erro ao criar a task:', err)
-  }
+// 🔹 Abrir modal de detalhes
+const openTaskDetails = async (task: any) => {
+  await fetchUrgencyLevels()
+  await fetchUsers()
+  await fetchEquipments()
+  selectedTask.value = { ...task }
+  showTaskDetailsModal.value = true
 }
 
-onMounted(fetchTasks)
-watch(searchQuery, fetchTasks)
+// 🔹 Criar e atualizar chamados
+const handleSave = async (newData: any) => {
+  await createTask(newData)
+  await fetchTasks()
+  showNewTaskModal.value = false
+}
+
+const handleUpdate = async (updatedData: any) => {
+  await updateTask(updatedData.id, updatedData)
+  await fetchTasks()
+  showTaskDetailsModal.value = false
+}
 
 watch(showNewTaskModal, async (isOpen) => {
   if (isOpen) {
     await fetchUsers()
     await fetchEquipments()
     await fetchUrgencyLevels()
-    showNewTaskModal.value = true   
   }
 })
 
+onMounted(fetchTasks)
+watch(searchQuery, fetchTasks)
 </script>
-
 
 <template>
   <div class="page-container">
-
-    <!-- Cabeçalho -->
     <div class="header">
       <h1>Chamados</h1>
       <p>Gerencie ordens de serviço com controle completo</p>
     </div>
 
-    <!-- 🔎 Barra de Pesquisa, Novo Chamado e Filtro -->
+    <!-- 🔎 Ações -->
     <div class="actions-bar">
       <div class="search-box">
         <span class="icon-search">🔍</span>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Buscar por título"
-        />
+        <input v-model="searchQuery" type="text" placeholder="Buscar por título" />
       </div>
 
       <div class="actions-buttons">
-        <button class="btn-primary" @click="showNewTaskModal = true">
-          + Novo Chamado
-        </button>
-        
+        <button class="btn-primary" @click="showNewTaskModal = true">+ Novo Chamado</button>
 
-
+        <!-- 📌 Filtro de Status -->
         <select v-model="statusFilter" @change="fetchTasks" class="select-filter">
-          <option value="Todos">Todas as Urgências</option>
-          <option value="Baixa">Baixa</option>
-          <option value="Média">Média</option>
-          <option value="Alta">Alta</option>
-          <option value="ExtraAlta">Extra Alta</option>
+          <option value="">Todos os Status</option>
+          <option value="ABERTO">Aberto</option>
+          <option value="EM_ANDAMENTO">Em Andamento</option>
+          <option value="CONCLUIDO">Concluído</option>
+          <option value="CANCELADO">Cancelado</option>
         </select>
       </div>
 
-      <NewTaskModal 
+      <NewTaskModal
         v-if="showNewTaskModal"
         @close="showNewTaskModal = false"
         @save="handleSave"
@@ -139,11 +150,9 @@ watch(showNewTaskModal, async (isOpen) => {
         :equipmentList="equipmentList"
         :urgencyOptions="urgencyOptions"
       />
-
-
     </div>
 
-    <!-- Tabela -->
+    <!-- 📋 Tabela de Chamados -->
     <div v-if="!isLoading" class="table-container">
       <table class="data-table">
         <thead>
@@ -151,32 +160,50 @@ watch(showNewTaskModal, async (isOpen) => {
             <th>ID</th>
             <th>Solicitante</th>
             <th>Título</th>
-            <th>Descrição</th>
             <th>Data de Abertura</th>
             <th>Urgência</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(task, index) in tasks" :key="index">
+          <tr
+            v-for="task in tasks"
+            :key="task.id"
+            class="clickable-row"
+            @click="openTaskDetails(task)"
+          >
             <td>{{ task.id }}</td>
             <td>{{ task.creator_FK?.name || '—' }}</td>
             <td>{{ task.name }}</td>
-            <td>{{ task.description }}</td>
-            <td>{{ task.creation_date }}</td>
-            <td>{{ task.urgency_level_label || task.urgency_level }}</td>
+            <td>{{ new Date(task.creation_date).toLocaleDateString('pt-BR') }}</td>
+            <td>
+              <span :class="'urgency-badge ' + task.urgency_level">
+                {{ formatUrgency(task.urgency_level) }}
+              </span>
+            </td>
+            <td>
+              <span :class="'status-badge ' + task.task_status">
+                {{ formatStatus(task.task_status) }}
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Loading -->
+    <TaskDetailsModal
+      v-if="showTaskDetailsModal"
+      :task="selectedTask"
+      :urgencyOptions="urgencyOptions"
+      @close="showTaskDetailsModal = false"
+      @update="handleUpdate"
+    />
+
     <div v-else class="loading">
       <span>⏳</span> Carregando chamados...
     </div>
-
   </div>
 </template>
-
 <style scoped lang="scss">
 .page-container {
   display: flex;
@@ -316,7 +343,7 @@ select option {
   font-size: 14px;
 }
 
-/* 🔵 Badges de urgência */
+/* 🔵 Badges de urgência (se quiser usar depois) */
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -338,5 +365,91 @@ select option {
   align-items: center;
   gap: 8px;
   color: #6b7280;
+}
+
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 🎯 Badges de Urgência — estilo dashboard */
+.urgency-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+/* 🟢 Baixa */
+.urgency-badge.LOW {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #1b5e20;
+}
+
+/* 🟡 Média */
+.urgency-badge.MEDIUM {
+  background-color: #fff9c4;
+  color: #795548;
+  border: 1px solid #795548;
+}
+
+/* 🟠 Alta */
+.urgency-badge.HIGH {
+  background-color: #ffe0b2;
+  color: #e65100;
+  border: 1px solid #e65100;
+}
+
+/* 🔴 Extra Alta */
+.urgency-badge.EXTRA_HIGH {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #b71c1c;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clickable-row:hover {
+  background-color: #f3f4f6;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.status-badge.ABERTO {
+  background-color: #e0f2fe;
+  color: #063970;
+  border: 1px solid #063970;
+}
+
+.status-badge.EM_ANDAMENTO {
+  background-color: #fff4e6;
+  color: #b75e00;
+  border: 1px solid #b75e00;
+}
+
+.status-badge.CONCLUIDO {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #1b5e20;
+}
+
+.status-badge.CANCELADO {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #b71c1c;
 }
 </style>

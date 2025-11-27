@@ -9,19 +9,13 @@
 
     <!-- Barra de ações -->
     <div class="actions-bar">
-      <!-- Campo de busca -->
       <div class="search-box">
         <span class="icon-search">🔍</span>
-        <input
-          v-model="filtro"
-          type="text"
-          placeholder="Buscar cliente..."
-        />
+        <input v-model="filtro" type="text" placeholder="Buscar cliente..." />
       </div>
 
-      <!-- Botão -->
       <div class="actions-buttons">
-        <button class="btn-primary" @click="novoCliente">
+        <button class="btn-primary" @click="abrirNovoCliente">
           + Novo Cliente
         </button>
       </div>
@@ -29,18 +23,9 @@
 
     <!-- Cards resumo -->
     <div class="cards-container">
-      <div class="card total">
-        <h3>Total de Clientes</h3>
-        <p>{{ totalClientes }}</p>
-      </div>
-      <div class="card ativos">
-        <h3>Clientes Ativos</h3>
-        <p>{{ clientesAtivos }}</p>
-      </div>
-      <div class="card inativos">
-        <h3>Clientes Inativos</h3>
-        <p>{{ clientesInativos }}</p>
-      </div>
+      <div class="card total"><h3>Total</h3><p>{{ totalClientes }}</p></div>
+      <div class="card ativos"><h3>Ativos</h3><p>{{ clientesAtivos }}</p></div>
+      <div class="card inativos"><h3>Inativos</h3><p>{{ clientesInativos }}</p></div>
     </div>
 
     <!-- Tabela -->
@@ -53,6 +38,7 @@
             <th>Email</th>
             <th>Tasks Criadas</th>
             <th>Status</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -66,75 +52,127 @@
                 {{ cli.is_active ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
+            <td>
+              <button class="btn-edit" @click="abrirEditarCliente(cli)">✏️ Editar</button>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <p v-else class="empty-message">Nenhum cliente encontrado.</p>
+
+    <!-- Modal de Cliente -->
+    <ClienteModal
+      :show="exibirModal"
+      v-model="formCliente"
+      :isEdit="isEdit"
+      @submit="salvarCliente"
+      @close="fecharModal"
+    />
   </div>
 </template>
 
-
-
 <script setup lang="ts">
-definePageMeta({
-  layout: 'dashboard-layout'
-})
+definePageMeta({ layout: 'dashboard-layout' })
 
 import { ref, onMounted, computed } from 'vue'
-import { getUsers } from '~/services/user.service'
+import { getUsers, createUser, updateUser } from '~/services/user.service'
+import ClienteModal from '~/components/ClienteModel.vue'
+
+const exibirModal = ref(false)
+const isEdit = ref(false)
 
 const clientes = ref([])
 const filtro = ref("")
 
+const formCliente = ref({
+  id: null,
+  name: "",
+  email: "",
+  nif: "",
+  password: "",
+  is_active: true,
+})
+
 const normalizar = (text: string) =>
   text?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 
-// ░░░░░░ FILTRO EM TEMPO REAL ░░░░░░
+// Filtro em tempo real
 const clientesFiltrados = computed(() => {
   const f = normalizar(filtro.value)
   if (!f) return clientes.value
 
-  return clientes.value.filter((cli: any) => {
-    const nome = normalizar(cli.name || "")
-    return nome.includes(f)
-  })
+  return clientes.value.filter((cli: any) =>
+    normalizar(cli.name).includes(f)
+  )
 })
 
-
-// ░░░░░░ BUSCA DOS CLIENTES ░░░░░░
+// Buscar clientes
 onMounted(async () => {
   try {
     const data = await getUsers()
     const users = data.results || []
-
     clientes.value = users.filter((user: any) =>
       user.groups?.some((g: string) => normalizar(g) === "cliente")
     )
-
   } catch (error) {
     console.error("Erro ao buscar clientes:", error)
   }
 })
 
-// ░░░░░░ CARDS - TOTAL / ATIVOS / INATIVOS ░░░░░░
+// Cards resumo
 const totalClientes = computed(() => clientes.value.length)
-const clientesAtivos = computed(() =>
-  clientes.value.filter((c: any) => c.is_active).length
-)
-const clientesInativos = computed(() =>
-  clientes.value.filter((c: any) => !c.is_active).length
-)
+const clientesAtivos = computed(() => clientes.value.filter(c => c.is_active).length)
+const clientesInativos = computed(() => clientes.value.filter(c => !c.is_active).length)
 
-
-// ░░░░░░ BOTÃO "NOVO CLIENTE" ░░░░░░
-const novoCliente = () => {
-  // Ajuste para sua rota real
-  navigateTo("/clientes/novo")
+// Ações para abrir modal
+const abrirNovoCliente = () => {
+  isEdit.value = false
+  formCliente.value = { name: "", email: "", nif: "", is_active: true }
+  exibirModal.value = true
 }
-</script>
 
+const abrirEditarCliente = (cliente: any) => {
+  isEdit.value = true
+  formCliente.value = {
+    id: cliente.id || cliente.pk,   // ⬅ garante o uso correto
+    name: cliente.name,
+    email: cliente.email,
+    nif: cliente.nif,
+    is_active: cliente.is_active,
+  }
+  exibirModal.value = true
+}
+
+
+const fecharModal = () => exibirModal.value = false
+
+// Salvar cliente (criar ou editar)
+const salvarCliente = async (data: any) => {
+  try {
+    if (isEdit.value) {
+      // 🟢 Agora tem ID garantido
+      const atualizado = await updateUser(data.id, data)
+
+      const index = clientes.value.findIndex(c => c.id === data.id)
+      if (index !== -1) clientes.value[index] = atualizado
+
+      alert("Cliente atualizado com sucesso!")
+    } else {
+      const novoCliente = await createUser({ ...data, groups: ['cliente'] })
+      clientes.value.push(novoCliente)
+      alert("Cliente criado com sucesso!")
+    }
+
+    exibirModal.value = false
+  } catch (err: any) {
+  console.error("Erro ao criar cliente:", err)
+  alert("Erro ao criar cliente: " + err.message)
+}
+}
+
+</script>
 <style scoped lang="scss">
 /* ======= TÍTULOS ======= */
 .page-container {
@@ -311,6 +349,16 @@ span.inativo {
   text-align: center;
   color: #6b7280;
   padding: 20px;
+}
+.btn-edit {
+  background: #e2e8f0;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-edit:hover {
+  background: #cbd5e1;
 }
 
 

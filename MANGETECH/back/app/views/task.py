@@ -12,10 +12,9 @@ from ..models import URGENCY_LEVELS
 class UrgencyLevelList(APIView):
     def get(self, request):
         return Response([
-            {"value": level.value, "label": level.label}
-            for level in URGENCY_LEVELS
+            {"value": level[0], "label": level[1]}
+            for level in URGENCY_LEVELS.choices
         ])
-
 class TaskView(ReadWriteSerializer, ModelViewSet):
     queryset = Task.objects.all() #Inicialmente tem acesso a toda(all) tabela(class)
     read_serializer_class = TaskReadSerializer
@@ -24,6 +23,9 @@ class TaskView(ReadWriteSerializer, ModelViewSet):
     filterset_class = TaskFilter #puxa a classe de filtro 
     permission_classes = [IsAuthenticated] #Só os usuários autenticados podem chamar esse endpoint 
 
+    def perform_create(self, serializer):
+        """Ao criar a task, define automaticamente o usuário logado como criador"""
+        serializer.save(creator_FK=self.request.user)
     def get_queryset(self):
         user = self.request.user
 

@@ -28,15 +28,14 @@
       </div>
     </div>
 
-    <!-- GRAFICO + AGENDA -->
+    <!-- GRAFICOS + AGENDA -->
     <div class="grid-main">
       <div class="chart-card">
-        <h3>Análise de Chamados</h3>
-        <div class="chart-placeholder">
-          📊 Gráfico em construção
-        </div>
-      </div>
+  <h3>Distribuição de Chamados por Status</h3>
+  <canvas id="statusChart"></canvas>
+</div>
 
+      <!-- AGENDA -->
       <div class="agenda-card">
         <div class="agenda-header">
           <h3>Agenda</h3>
@@ -47,7 +46,6 @@
           </div>
         </div>
 
-        <!-- CALENDÁRIO -->
         <div class="calendar">
           <div class="calendar-weekdays">
             <span v-for="day in weekdays" :key="day">{{ day }}</span>
@@ -72,7 +70,6 @@
           </div>
         </div>
 
-        <!-- DETALHES DO DIA -->
         <div v-if="selectedItems.length" class="agenda-details">
           <h4>Compromissos de {{ selectedDateFormatted }}</h4>
           <ul>
@@ -81,6 +78,7 @@
             </li>
           </ul>
         </div>
+
         <p v-else class="agenda-empty">
           Nenhum compromisso para o dia selecionado.
         </p>
@@ -99,17 +97,17 @@ import { ref, computed, onMounted } from 'vue'
 import { getCurrentUser } from '~/services/auth.services'
 import { getTasks } from '~/services/task.services'
 import { getUsers } from '~/services/user.service'
+import { Chart, registerables } from 'chart.js'
+Chart.register(...registerables)
 
-// ----------------------------------------
-// 📌 STATES
-// ----------------------------------------
+// === STATES ===
 const user = ref(null)
-
 const chamadosAbertos = ref(0)
 const mensagens = ref(0)
 const totalClientes = ref(0)
+const chamados = ref([])
 
-// Agenda fixa (por dia da semana)
+// === AGENDA FIXA ===
 const agenda = [
   { id: 1, dia: 'Segunda', tarefa: 'Revisar chamados pendentes' },
   { id: 2, dia: 'Terça', tarefa: 'Visita técnica' },
@@ -118,10 +116,8 @@ const agenda = [
   { id: 5, dia: 'Sexta', tarefa: 'Revisão final' }
 ]
 
-// ----------------------------------------
-// 📆 LÓGICA DO CALENDÁRIO
-// ----------------------------------------
-const currentMonth = ref(new Date())       // referência do mês atual
+// === CALENDÁRIO ===
+const currentMonth = ref(new Date())
 const selectedDate = ref(new Date())
 
 const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -155,63 +151,42 @@ const calendarDays = computed(() => {
   const month = currentMonth.value.getMonth()
 
   const firstDayOfMonth = new Date(year, month, 1)
-  const firstWeekday = firstDayOfMonth.getDay() // 0-6
+  const firstWeekday = firstDayOfMonth.getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const daysInPrevMonth = new Date(year, month, 0).getDate()
 
   const days = []
-
-  // Dias do mês anterior para preencher o início (se a semana não começa em domingo)
   for (let i = firstWeekday - 1; i >= 0; i--) {
     const date = new Date(year, month - 1, daysInPrevMonth - i)
-    days.push({
-      date,
-      isCurrentMonth: false,
-      items: getAgendaItemsForDate(date)
-    })
+    days.push({ date, isCurrentMonth: false, items: getAgendaItemsForDate(date) })
   }
 
-  // Dias do mês atual
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d)
-    days.push({
-      date,
-      isCurrentMonth: true,
-      items: getAgendaItemsForDate(date)
-    })
+    days.push({ date, isCurrentMonth: true, items: getAgendaItemsForDate(date) })
   }
 
-  // Completar com dias do próximo mês para fechar a grade (múltiplo de 7)
   let nextDay = 1
   while (days.length % 7 !== 0) {
     const date = new Date(year, month + 1, nextDay++)
-    days.push({
-      date,
-      isCurrentMonth: false,
-      items: getAgendaItemsForDate(date)
-    })
+    days.push({ date, isCurrentMonth: false, items: getAgendaItemsForDate(date) })
   }
 
   return days
 })
 
-const sameDay = (d1, d2) => {
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  )
-}
+const sameDay = (d1, d2) =>
+  d1.getFullYear() === d2.getFullYear() &&
+  d1.getMonth() === d2.getMonth() &&
+  d1.getDate() === d2.getDate()
 
-const selectedItems = computed(() => {
-  if (!selectedDate.value) return []
-  return getAgendaItemsForDate(selectedDate.value)
-})
+const selectedItems = computed(() =>
+  selectedDate.value ? getAgendaItemsForDate(selectedDate.value) : []
+)
 
-const selectedDateFormatted = computed(() => {
-  if (!selectedDate.value) return ''
-  return selectedDate.value.toLocaleDateString()
-})
+const selectedDateFormatted = computed(() =>
+  selectedDate.value ? selectedDate.value.toLocaleDateString() : ''
+)
 
 const prevMonth = () => {
   const d = new Date(currentMonth.value)
@@ -229,24 +204,58 @@ const selectDay = (day) => {
   selectedDate.value = day.date
 }
 
-// ----------------------------------------
-// 📌 FETCH DOS DADOS REAIS
-// ----------------------------------------
+// === FETCH REAL DATA ===
 onMounted(async () => {
   try {
     user.value = await getCurrentUser()
 
-    const tasks = await getTasks()
-    chamadosAbertos.value = tasks.results.filter(t => t.status === 'aberto').length
-    mensagens.value = tasks.results.filter(t => t.type === 'mensagem').length
+    const tasksData = await getTasks()
+    chamados.value = tasksData.results || []
+
+    chamadosAbertos.value = chamados.value.filter(t => t.status?.toLowerCase() === 'aberto').length
+    mensagens.value = chamados.value.filter(t => t.type?.toLowerCase() === 'mensagem').length
 
     const users = await getUsers()
-    totalClientes.value = users.length
+    totalClientes.value = users.results ? users.results.length : users.length
+
+    renderCharts()
   } catch (error) {
     console.error('Erro ao carregar dados:', error)
   }
 })
+
+// === GRÁFICOS ===
+function renderCharts() {
+  const statusCounts = chamados.value.reduce((acc, item) => {
+    acc[item.status] = (acc[item.status] || 0) + 1
+    return acc
+  }, {})
+
+  const ctx1 = document.getElementById('statusChart')
+  if (ctx1) {
+    new Chart(ctx1, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(statusCounts),
+        datasets: [{
+          data: Object.values(statusCounts)
+        }]
+      },
+      options: {
+        plugins: { 
+          title: { 
+            display: false 
+          },
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    })
+  }
+}
 </script>
+
 
 <style scoped lang="scss">
 .monitoramento {
@@ -338,26 +347,15 @@ onMounted(async () => {
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-
-  h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 14px;
-    color: #1e293b;
-  }
+  text-align: center;
 }
 
-.chart-placeholder {
-  height: 260px;
-  border-radius: 12px;
-  background: #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #636e75;
-  font-size: 15px;
+.chart-card canvas {
+  width: 100% !important;
+  max-width: 500px;
+  height: 280px !important;
+  margin: 0 auto;
 }
-
 /* ====== CARD AGENDA ====== */
 .agenda-card {
   background: #ffffff;
@@ -521,4 +519,5 @@ onMounted(async () => {
     padding: 26px;
   }
 }
+
 </style>

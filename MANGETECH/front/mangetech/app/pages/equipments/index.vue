@@ -1,240 +1,406 @@
+<script setup lang="ts">
+definePageMeta({ layout: 'dashboard-layout' })
+
+import { getEquipments, createEquipment, updateEquipment } from '~/services/equipment.services'
+import { getCategories } from '~/services/category.services'
+import { getEnvironments } from '~/services/environment.services'
+
+import NewEquipmentModal from '~/components/NewEquipmentModal.vue'
+import EquipmentDetailsModal from '~/components/EquipmentDetailsModal.vue'
+
+const equipments = ref<any[]>([])
+const searchQuery = ref('')
+const isLoading = ref(false)
+
+const showNewEquipmentModal = ref(false)
+const showEquipmentDetailsModal = ref(false)
+const selectedEquipment = ref<any | null>(null)
+
+const categoriesList = ref<any[]>([])
+const environmentsList = ref<any[]>([])
+
+// 🔹 Buscar categorias e ambientes do backend
+const fetchCategories = async () => {
+  const data = await getCategories()
+  categoriesList.value = data.results || data || []
+}
+
+const fetchEnvironments = async () => {
+  const data = await getEnvironments()
+  environmentsList.value = data.results || data || []
+}
+
+// 🔹 Buscar equipamentos
+const fetchEquipmentsData = async () => {
+  try {
+    isLoading.value = true
+    const params: Record<string, any> = {}
+
+    if (searchQuery.value) params.name = searchQuery.value
+
+    const { data } = await getEquipments(params)
+    equipments.value = data.value?.results || data.results || data || []
+  } catch (err) {
+    console.error('Erro ao buscar equipamentos:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// 🔹 Abrir modal de detalhes
+const openEquipmentDetails = async (equipment: any) => {
+  await fetchCategories()
+  await fetchEnvironments()
+  selectedEquipment.value = { ...equipment }
+  showEquipmentDetailsModal.value = true
+}
+
+// 🔹 Criar novo equipamento
+const handleSave = async (newData: any) => {
+  await createEquipment(newData)
+  await fetchEquipmentsData()
+  showNewEquipmentModal.value = false
+}
+
+// 🔹 Atualizar equipamento
+const handleUpdate = async (updatedData: any) => {
+  await updateEquipment(updatedData.id, updatedData)
+  await fetchEquipmentsData()
+  showEquipmentDetailsModal.value = false
+}
+
+// 🔹 Watchers
+watch(showNewEquipmentModal, async (isOpen) => {
+  if (isOpen) {
+    await fetchCategories()
+    await fetchEnvironments()
+  }
+})
+
+onMounted(fetchEquipmentsData)
+watch(searchQuery, fetchEquipmentsData)
+</script>
+
 <template>
-  <section class="ativos-page">
-
-    <!-- CABEÇALHO -->
-    <div class="header-bar">
-      <div>
-        <h1>Equipamentos</h1>
-        <p>Gerencie seus ativos e acompanhe seus registros</p>
-      </div>
-
+  <div class="page-container">
+    <div class="header">
+      <h1>Ativos</h1>
+      <p>Gerencie os equipamentos cadastrados no sistema</p>
     </div>
 
-    <!-- BARRA DE PESQUISA -->
+    <!-- 🔎 Ações -->
     <div class="actions-bar">
       <div class="search-box">
         <span class="icon-search">🔍</span>
-        <input
-          type="text"
-          v-model="filtro"
-          placeholder="Buscar equipamento..."
-        />
+        <input v-model="searchQuery" type="text" placeholder="Buscar por nome ou código" />
       </div>
 
-      <button class="btn-primary" @click="novoEquipamento">
-        + Novo Equipamento
-      </button>
+      <div class="actions-buttons">
+        <button class="btn-primary" @click="showNewEquipmentModal = true">+ Novo Ativo</button>
+      </div>
+
+      <!-- Modal de criação -->
+      <NewEquipmentModal
+        v-if="showNewEquipmentModal"
+        @close="showNewEquipmentModal = false"
+        @save="handleSave"
+        :categoriesList="categoriesList"
+        :environmentsList="environmentsList"
+      />
     </div>
 
-    <!-- TABELA -->
-    <div class="table-container" v-if="equipamentosFiltrados.length">
+    <!-- 📋 Tabela de Ativos -->
+    <div v-if="!isLoading" class="table-container">
       <table class="data-table">
         <thead>
           <tr>
+            <th>ID</th>
             <th>Nome</th>
             <th>Código</th>
-            <th>Descrição</th>
-            <th>Data de Criação</th>
             <th>Categoria</th>
             <th>Ambiente</th>
+            <th>Data de Criação</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(equip, index) in equipamentosFiltrados" :key="index">
-            <td>{{ equip.name }}</td>
-            <td>{{ equip.code }}</td>
-            <td>{{ equip.description }}</td>
-            <td>{{ new Date(equip.creation_date).toLocaleDateString() }}</td>
-            <td>{{ equip.category_FK || '—' }}</td>
-            <td>{{ equip.environment_FK?.name || '—' }}</td>
+          <tr
+            v-for="eq in equipments"
+            :key="eq.id"
+            class="clickable-row"
+            @click="openEquipmentDetails(eq)"
+          >
+            <td>{{ eq.id }}</td>
+            <td>{{ eq.name }}</td>
+            <td>{{ eq.code }}</td>
+            <td>{{ eq.category_FK?.name || '—' }}</td>
+            <td>{{ eq.environment_FK?.name || '—' }}</td>
+            <td>{{ new Date(eq.creation_date).toLocaleDateString('pt-BR') }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <p v-else class="empty-message">Nenhum equipamento encontrado.</p>
+    <!-- Modal de edição -->
+    <EquipmentDetailsModal
+      v-if="showEquipmentDetailsModal"
+      :equipment="selectedEquipment"
+      :categoriesList="categoriesList"
+      :environmentsList="environmentsList"
+      @close="showEquipmentDetailsModal = false"
+      @update="handleUpdate"
+    />
 
-  </section>
+    <div v-else class="loading">
+      <span>⏳</span> Carregando equipamentos...
+    </div>
+  </div>
 </template>
-
-<script setup lang="ts">
-definePageMeta({ layout: 'dashboard-layout' })
-
-import { ref, computed, onMounted } from 'vue'
-import { getEquipments } from '@/services/equipment.services'
-
-const equipamentos = ref([])
-const filtro = ref('')
-
-const equipamentosFiltrados = computed(() => {
-  const f = filtro.value.toLowerCase()
-  return equipamentos.value.filter(e =>
-    e.name?.toLowerCase().includes(f) ||
-    e.code?.toLowerCase().includes(f)
-  )
-})
-
-const novoEquipamento = () => {
-  navigateTo('/equipamentos/novo')
-}
-
-onMounted(async () => {
-  try {
-    const { data, error } = await getEquipments()
-    if (error.value) console.error(error.value)
-    equipamentos.value = data.value?.results || []
-  } catch (err) {
-    console.error('Erro ao buscar equipamentos:', err)
-  }
-})
-</script>
-
 <style scoped lang="scss">
-.ativos-page {
+.page-container {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 24px;
-  font-family: 'Inter', sans-serif;
 }
 
-/* ===== CABEÇALHO ===== */
-.header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  h1 {
-    font-size: 1.9rem;
-    font-weight: 600;
-    color: #1e293b;
-  }
-
-  p {
-    font-size: 0.95rem;
-    color: #6b7280;
-  }
-}
-
-/* ===== BOTÃO PADRÃO ===== */
-.btn-primary {
-  background-color: #1e293b;
-  color: #fff;
-  padding: 10px 22px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+.header h1 {
+  font-size: 28px;
   font-weight: 600;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background-color: #172554;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
+  color: #1f2937;
 }
 
-/* ===== ACTIONS BAR (Filtro + Botão) ===== */
+.header p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 📌 CONTAINER PRINCIPAL DE AÇÕES */
 .actions-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background-color: #ffffff;
+  background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-/* ===== CAMPO DE BUSCA ===== */
+/* 🔎 Campo de busca */
 .search-box {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 8px 14px;
   flex: 1;
-  max-width: 600px;
-  padding: 10px 16px;
-  background-color: #f9fafb;
-  border: 1px solid #d1d5db;
+  max-width: 650px;
+  background: #f9fafb;
+  border: 1px solid #ced4da;
   border-radius: 30px;
   transition: all 0.3s ease;
-
-  &:focus-within {
-    border-color: #1e293b;
-    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.25);
-  }
-
-  .icon-search {
-    color: #6b7280;
-    font-size: 15px;
-  }
-
-  input {
-    border: none;
-    outline: none;
-    background: transparent;
-    width: 100%;
-    font-size: 14px;
-    color: #374151;
-  }
 }
 
-/* ===== TABELA ===== */
+.search-box:hover,
+.search-box:focus-within {
+  border-color: #1e293b;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.search-box input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+}
+
+.icon-search {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* 🎯 Botões e filtro */
+.actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-primary {
+  padding: 8px 16px;
+  background-color:#1e293b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #172554;
+}
+
+.select-filter {
+  appearance: none;
+  background-color: #ffffff !important;
+  color: #333;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.select-filter:focus {
+  outline: none;
+  border-color:#1e293b;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #333;
+}
+.select-filter:hover,
+.select-filter:focus {
+  border-color: #1e293b;
+}
+
+/* 📋 Tabela */
 .table-container {
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
   background-color: #fff;
-
-  th {
-    background-color: #f3f4f6;
-    padding: 14px;
-    text-align: left;
-    font-weight: 600;
-    color: #374151;
-    font-size: 0.9rem;
-  }
-
-  td {
-    padding: 14px;
-    font-size: 0.95rem;
-    color: #374151;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  tbody tr:hover {
-    background-color: #f9fafb;
-    transition: all 0.3s ease;
-  }
 }
 
-/* ===== EMPTY ===== */
-.empty-message {
+.data-table thead {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.data-table th,
+.data-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  font-size: 14px;
+}
+
+/* 🔵 Badges de urgência (se quiser usar depois) */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-block;
   text-align: center;
-  color: #6b7280;
-  font-style: italic;
-  padding: 20px;
 }
 
-/* ===== RESPONSIVO ===== */
-@media (max-width: 900px) {
-  .actions-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.Baixa { background-color: #d1fae5; color: #065f46; }
+.Média { background-color: #fef3c7; color: #78350f; }
+.Alta { background-color: #fee2e2; color: #991b1b; }
+.ExtraAlta { background-color: #fecaca; color: #7f1d1d; }
 
-  .btn-primary {
-    width: 100%;
-  }
+/* 🌀 Loading */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 🎯 Badges de Urgência — estilo dashboard */
+.urgency-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+/* 🟢 Baixa */
+.urgency-badge.LOW {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #1b5e20;
+}
+
+/* 🟡 Média */
+.urgency-badge.MEDIUM {
+  background-color: #fff9c4;
+  color: #795548;
+  border: 1px solid #795548;
+}
+
+/* 🟠 Alta */
+.urgency-badge.HIGH {
+  background-color: #ffe0b2;
+  color: #e65100;
+  border: 1px solid #e65100;
+}
+
+/* 🔴 Extra Alta */
+.urgency-badge.EXTRA_HIGH {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #b71c1c;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clickable-row:hover {
+  background-color: #f3f4f6;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 18px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.status-badge.ABERTO {
+  background-color: #e0f2fe;
+  color: #063970;
+  border: 1px solid #063970;
+}
+
+.status-badge.EM_ANDAMENTO {
+  background-color: #fff4e6;
+  color: #b75e00;
+  border: 1px solid #b75e00;
+}
+
+.status-badge.CONCLUIDO {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #1b5e20;
+}
+
+.status-badge.CANCELADO {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #b71c1c;
 }
 </style>

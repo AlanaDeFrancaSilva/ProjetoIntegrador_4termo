@@ -21,3 +21,4 @@ class TaskWriteSerializer(serializers.ModelSerializer):
         model = Task
         fields = '__all__'
         many= True
+
