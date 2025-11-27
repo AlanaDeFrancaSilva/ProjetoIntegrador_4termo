@@ -10,7 +10,7 @@ class URGENCY_LEVELS(models.TextChoices):
 class Task(models.Model):
     name = models.CharField(max_length=150)
     description = models.CharField(max_length=1000)
-    suggested_date = models.DateTimeField()
+    suggested_date = models.DateTimeField(auto_now_add=True)
     urgency_level = models.CharField(max_length=50, 
                                      choices=URGENCY_LEVELS.choices,
                                      default=URGENCY_LEVELS.LOW)

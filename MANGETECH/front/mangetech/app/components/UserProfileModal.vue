@@ -93,7 +93,14 @@ async function save() {
   justify-content: center;
   align-items: center;
 
-  z-index: 9999; /* Garantindo que o modal fique por cima de tudo*/
+  /*z-index: 9999;  Garantindo que o modal fique por cima de tudo*/
+}
+.modal-overlay {
+  z-index: 999999 !important;
+}
+
+.modal {
+  z-index: 1000000 !important;
 }
 
 /* Caixa do modal */

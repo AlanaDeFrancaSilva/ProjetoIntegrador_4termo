@@ -1,7 +1,7 @@
 <template>
   <div class="modal-overlay" @click.self="close">
     <div class="modal">
-      
+
       <!-- Cabeçalho -->
       <div class="modal-header">
         <h2>Novo Chamado</h2>
@@ -11,46 +11,75 @@
       <!-- Formulário -->
       <form @submit.prevent="submitForm" class="modal-body">
 
-        <input
-          type="text"
-          v-model="form.title"
-          placeholder="Título"
-          required
-        />
+        <!-- NOME -->
+        <label>Nome</label>
+        <input v-model="form.name" type="text" required />
 
-        <textarea
-          v-model="form.description"
-          placeholder="Descrição"
-          rows="4"
-          required
-        ></textarea>
+        <!-- DESCRIÇÃO -->
+        <label>Descrição</label>
+        <textarea v-model="form.description" rows="3" required></textarea>
 
-        <select v-model="form.urgency" required>
-          <option value="" disabled selected>Urgência</option>
-          <option value="LOW">Baixa</option>
-          <option value="MEDIUM">Média</option>
-          <option value="HIGH">Alta</option>
-          <option value="EXTRA_HIGH">Extra Alta</option>
+        <div>{{ props.urgencyOptions }}</div>
+
+        <!-- URGÊNCIA -->
+        <label>Urgência</label>
+        <select v-model="form.urgency_level" required>
+          <option disabled value="">Selecione a urgência</option>
+          <option v-for="level in urgencyOptions" 
+                :key="level.value" 
+                :value="level.value">
+          {{ level.label }}
+        </option>
         </select>
+
+        <!-- USUÁRIOS RESPONSÁVEIS (ManyToMany) -->
+        <label>Responsáveis</label>
+        <select v-model="form.responsibles_FK" multiple>
+          <option v-for="user in props.usersList" :key="user.id" :value="user.id">
+            {{ user.name }}
+          </option>
+        </select>
+
+        <!-- EQUIPAMENTOS (ManyToMany) -->
+        <label>Equipamentos relacionados</label>
+        <select v-model="form.equipments_FK" multiple>
+          <option v-for="eq in props.equipmentList" :key="eq.id" :value="eq.id">
+            {{ eq.name }}
+          </option>
+        </select>
+
+        <!-- DATA DE CRIAÇÃO (somente leitura) -->
+        <label>Data de Criação</label>
+        <input v-model="form.creation_date" type="text" disabled />
 
         <!-- Botões -->
         <div class="modal-footer">
           <button type="button" class="btn-cancel" @click="close">Cancelar</button>
           <button type="submit" class="btn-save">Salvar</button>
         </div>
+
       </form>
     </div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref } from 'vue'
 const emit = defineEmits(['close', 'save'])
 
 const form = ref({
-  title: '',
+  name: '',
   description: '',
-  urgency: ''
+  urgency_level: '',
+  responsibles_FK: [],
+  equipments_FK: []
+})
+
+const props = defineProps({
+  usersList: { type: Array, default: () => [] },
+  equipmentList: { type: Array, default: () => [] },
+  urgencyOptions: { type: Array, default: () => [] }
 })
 
 const close = () => emit('close')

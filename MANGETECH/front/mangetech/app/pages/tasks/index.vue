@@ -4,8 +4,11 @@ definePageMeta({
 })
 
 import { ref, watch, onMounted } from 'vue'
-import { getTasks } from '~/services/task.services'
+import { getTasks, createTask } from '~/services/task.services'
+import { getUsers } from '~/services/user.service'
 import NewTaskModal from '~/components/NewTaskModal.vue'
+import { getEquipments } from '~/services/equipment.services'
+import { getUrgencyLevels } from '~/services/urgency.services'
 
 const tasks = ref<any[]>([])
 const searchQuery = ref('')
@@ -13,12 +16,32 @@ const statusFilter = ref('')
 const isLoading = ref(false)
 const showNewTaskModal = ref(false)
 
-const urgencyMap: Record<string, string> = {
-  LOW: 'Baixa',
-  MEDIUM: 'Média',
-  HIGH: 'Alta',
-  EXTRA_HIGH: 'ExtraAlta',
+const usersList = ref<any[]>([])
+const equipmentList = ref<any[]>([])
+const urgencyOptions = ref<any[]>([])
+
+const fetchUsers = async () => {
+  const data = await getUsers()
+  console.log('Usuários recebidos:', data)
+  usersList.value = data.results || data || []
 }
+
+const fetchEquipments = async () => {
+  equipmentList.value = await getEquipments()
+  console.log('Equipamentos recebidos:', equipmentList.value)
+}
+
+const fetchUrgencyLevels = async () => {
+  const data = await getUrgencyLevels()
+  console.log('Urgências recebidas:', data)
+
+  urgencyOptions.value = data.map((item: any) => ({
+    value: item.value,
+    label: item.label.toUpperCase().replace('_', ' ')
+  }))
+}
+
+
 
 const fetchTasks = async () => {
   try {
@@ -46,9 +69,31 @@ const fetchTasks = async () => {
   }
 }
 
+// 🔹 FUNÇÃO PRINCIPAL PARA SALVAR UMA NOVA TASK
+const handleSave = async (newTaskData: any) => {
+  try {
+    await createTask(newTaskData) // Envia para o backend
+    await fetchTasks()            // Atualiza a lista automaticamente
+    showNewTaskModal.value = false // Fecha o modal
+  } catch (err) {
+    console.error('Erro ao criar a task:', err)
+  }
+}
+
 onMounted(fetchTasks)
 watch(searchQuery, fetchTasks)
+
+watch(showNewTaskModal, async (isOpen) => {
+  if (isOpen) {
+    await fetchUsers()
+    await fetchEquipments()
+    await fetchUrgencyLevels()
+    showNewTaskModal.value = true   
+  }
+})
+
 </script>
+
 
 <template>
   <div class="page-container">
@@ -74,6 +119,8 @@ watch(searchQuery, fetchTasks)
         <button class="btn-primary" @click="showNewTaskModal = true">
           + Novo Chamado
         </button>
+        
+
 
         <select v-model="statusFilter" @change="fetchTasks" class="select-filter">
           <option value="Todos">Todas as Urgências</option>
@@ -83,9 +130,18 @@ watch(searchQuery, fetchTasks)
           <option value="ExtraAlta">Extra Alta</option>
         </select>
       </div>
-    </div>
 
-    <NewTaskModal v-if="showNewTaskModal" @close="showNewTaskModal = false" />
+      <NewTaskModal 
+        v-if="showNewTaskModal"
+        @close="showNewTaskModal = false"
+        @save="handleSave"
+        :usersList="usersList"
+        :equipmentList="equipmentList"
+        :urgencyOptions="urgencyOptions"
+      />
+
+
+    </div>
 
     <!-- Tabela -->
     <div v-if="!isLoading" class="table-container">
@@ -107,11 +163,7 @@ watch(searchQuery, fetchTasks)
             <td>{{ task.name }}</td>
             <td>{{ task.description }}</td>
             <td>{{ task.creation_date }}</td>
-            <td>
-              <span :class="['status-badge', urgencyMap[task.urgency_level]]">
-                {{ urgencyMap[task.urgency_level] }}
-              </span>
-            </td>
+            <td>{{ task.urgency_level_label || task.urgency_level }}</td>
           </tr>
         </tbody>
       </table>

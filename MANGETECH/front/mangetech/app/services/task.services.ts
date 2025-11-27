@@ -11,3 +11,11 @@ export const getTaskById = (id: string) => {
   const { $authFetch } = useNuxtApp()
   return $authFetch<Task>(`http://localhost:8001/api/task/${id}/`)
 }
+
+export const createTask = (data: any) => {
+  const { $authFetch } = useNuxtApp()
+  return $authFetch<Task>('http://localhost:8001/api/task/', {
+    method: 'POST',
+    body: data,
+  })
+}

@@ -9,6 +9,7 @@ class TaskReadSerializer(serializers.ModelSerializer):
     creator_FK = CustomUserSerializer() #puxa as informações do usuario
     equipments_FK = EquipmentSerializer(many=True) #puxa as informações do equipamento
     responsibles_FK = CustomUserSerializer(many=True)
+    urgency_level_label = serializers.CharField(source='get_urgency_level_display')
     
     class Meta:
         model = Task

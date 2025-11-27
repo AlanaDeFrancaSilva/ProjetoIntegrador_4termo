@@ -5,6 +5,16 @@ from ..filters import TaskFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from ..utils import is_Admin
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from ..models import URGENCY_LEVELS
+
+class UrgencyLevelList(APIView):
+    def get(self, request):
+        return Response([
+            {"value": level.value, "label": level.label}
+            for level in URGENCY_LEVELS
+        ])
 
 class TaskView(ReadWriteSerializer, ModelViewSet):
     queryset = Task.objects.all() #Inicialmente tem acesso a toda(all) tabela(class)

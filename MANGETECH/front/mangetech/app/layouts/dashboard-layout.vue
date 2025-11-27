@@ -30,7 +30,7 @@ import SidebarMenu from '@/components/SidebarMenu.vue'
   padding: 2.5rem 3rem;
   background-color: #f4f6f9;
   color: #111;
-  overflow-y: auto;
+  overflow-y: visible;
   display: flex;
   flex-direction: column;
 
