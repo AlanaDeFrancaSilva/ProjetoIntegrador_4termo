@@ -84,15 +84,26 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'submit', 'update:modelValue'])
 
-const form = ref({ ...props.modelValue })
+const form = ref({})     // Inicializa vazio
 const activeTab = ref('Informações')
 const tabs = ['Informações', 'Contato', 'Acesso']
 
+// 🔹 Atualiza o form sempre que modelValue mudar (inclusive ao abrir modal)
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    form.value = { ...newVal }
+  },
+  { deep: true, immediate: true }
+)
+
+// 🔹 Envia alterações para o componente pai
 watch(form, (val) => emit('update:modelValue', val), { deep: true })
 
 const close = () => emit('close')
 const submit = () => emit('submit', form.value)
 </script>
+
 
 <style scoped>
 .modal-overlay {

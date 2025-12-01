@@ -21,9 +21,16 @@ const environmentsList = ref<any[]>([])
 
 // 🔹 Buscar categorias e ambientes do backend
 const fetchCategories = async () => {
-  const data = await getCategories()
-  categoriesList.value = data.results || data || []
+  try {
+    const data = await getCategories()
+    console.log('🔎 Categorias recebidas da API:', data)
+    categoriesList.value = Array.isArray(data) ? data : data.results ?? []
+  } catch (e) {
+    console.error('❌ Erro ao buscar categorias:', e)
+  }
 }
+
+
 
 const fetchEnvironments = async () => {
   const data = await getEnvironments()

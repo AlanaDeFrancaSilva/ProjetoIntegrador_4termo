@@ -25,13 +25,16 @@ const showTaskDetailsModal = ref(false)
 // 🔹 Mapa dos status
 const formatStatus = (status: string) => {
   const map: Record<string, string> = {
-    ABERTO: 'Aberto',
-    EM_ANDAMENTO: 'Em Andamento',
-    CONCLUIDO: 'Concluído',
-    CANCELADO: 'Cancelado'
+    OPEN: 'Aberto',
+    WAITING_RESPONSIBLE: 'Aguardando Responsável',
+    ONGOING: 'Em Andamento',
+    DONE: 'Concluído',
+    FINISHED: 'Finalizado',
+    CANCELLED: 'Cancelado'
   }
   return map[status] || status || 'Sem Status'
 }
+
 
 // 🔹 Mapa das urgências
 const formatUrgency = (level: string) => {
@@ -70,7 +73,7 @@ const fetchTasks = async () => {
     const params: Record<string, any> = {}
 
     if (searchQuery.value) params.name = searchQuery.value
-    if (statusFilter.value) params.task_status = statusFilter.value
+    if (statusFilter.value) params.TaskStatus_task_FK__status = statusFilter.value
 
     const { data } = await getTasks(params)
     tasks.value = data.value?.results || data.results || data || []
@@ -80,6 +83,9 @@ const fetchTasks = async () => {
     isLoading.value = false
   }
 }
+
+const getLatestStatus = (task) =>
+  task.TaskStatus_task_FK?.at(-1)?.status || 'Sem Status'
 
 // 🔹 Abrir modal de detalhes
 const openTaskDetails = async (task: any) => {
@@ -133,13 +139,15 @@ watch(searchQuery, fetchTasks)
         <button class="btn-primary" @click="showNewTaskModal = true">+ Novo Chamado</button>
 
         <!-- 📌 Filtro de Status -->
-        <select v-model="statusFilter" @change="fetchTasks" class="select-filter">
-          <option value="">Todos os Status</option>
-          <option value="ABERTO">Aberto</option>
-          <option value="EM_ANDAMENTO">Em Andamento</option>
-          <option value="CONCLUIDO">Concluído</option>
-          <option value="CANCELADO">Cancelado</option>
-        </select>
+      <select v-model="statusFilter" @change="fetchTasks" class="select-filter">
+  <option value="">Todos os Status</option>
+  <option value="OPEN">Aberto</option>
+  <option value="WAITING_RESPONSIBLE">Aguardando Responsável</option>
+  <option value="ONGOING">Em Andamento</option>
+  <option value="DONE">Concluído</option>
+  <option value="FINISHED">Finalizado</option>
+  <option value="CANCELLED">Cancelado</option>
+</select>
       </div>
 
       <NewTaskModal
@@ -182,9 +190,10 @@ watch(searchQuery, fetchTasks)
               </span>
             </td>
             <td>
-              <span :class="'status-badge ' + task.task_status">
-                {{ formatStatus(task.task_status) }}
-              </span>
+              <span :class="'status-badge ' + getLatestStatus(task)">
+  {{ formatStatus(getLatestStatus(task)) }}
+</span>
+
             </td>
           </tr>
         </tbody>

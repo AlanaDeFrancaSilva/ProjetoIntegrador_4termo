@@ -29,15 +29,11 @@
           </option>
         </select>
 
-        <!-- 🔹 Status -->
+        <!-- 🔹 Status (selecionável manualmente) -->
         <label>Status</label>
-        <select v-model="form.task_status" required>
+        <select v-model="form.status" required>
           <option disabled value="">Selecione o status</option>
-          <option
-            v-for="opt in statusOptions"
-            :key="opt.value"
-            :value="opt.value"
-          >
+          <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>
         </select>
@@ -45,11 +41,7 @@
         <!-- Responsáveis -->
         <label>Responsáveis</label>
         <select v-model="form.responsibles_FK" multiple>
-          <option
-            v-for="user in props.usersList"
-            :key="user.id"
-            :value="user.id"
-          >
+          <option v-for="user in props.usersList" :key="user.id" :value="user.id">
             {{ user.name }}
           </option>
         </select>
@@ -57,11 +49,7 @@
         <!-- Equipamentos -->
         <label>Equipamentos relacionados</label>
         <select v-model="form.equipments_FK" multiple>
-          <option
-            v-for="eq in props.equipmentList"
-            :key="eq.id"
-            :value="eq.id"
-          >
+          <option v-for="eq in props.equipmentList" :key="eq.id" :value="eq.id">
             {{ eq.name }}
           </option>
         </select>
@@ -84,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const emit = defineEmits(['close', 'save'])
 
@@ -94,23 +82,32 @@ const props = defineProps({
   urgencyOptions: { type: Array, default: () => [] },
 })
 
-// 🔹 Opções de Status
+// 🔹 Status com valores reais do Django
 const statusOptions = [
-  { value: 'ABERTO', label: 'Aberto' },
-  { value: 'EM_ANDAMENTO', label: 'Em Andamento' },
-  { value: 'CONCLUIDO', label: 'Concluído' },
-  { value: 'CANCELADO', label: 'Cancelado' }
+  { value: 'OPEN', label: 'Aberto' },
+  { value: 'WAITING_RESPONSIBLE', label: 'Aguardando Responsável' },
+  { value: 'ONGOING', label: 'Em Andamento' },
+  { value: 'DONE', label: 'Concluído' },
+  { value: 'FINISHED', label: 'Finalizado' },
+  { value: 'CANCELLED', label: 'Cancelado' },
 ]
 
-// 🔹 Formulário completo (SEM duplicação)
+// 🔹 Formulário correto
 const form = ref({
   name: '',
   description: '',
   urgency_level: '',
-  task_status: 'ABERTO',
+  status: 'OPEN',   // Agora começa como ABERTO corretamente
   responsibles_FK: [],
   equipments_FK: [],
   creation_date: new Date().toLocaleDateString(),
+})
+
+// 🔹 Se atribuir usuários, mudar automaticamente para ONGOING
+watch(() => form.value.responsibles_FK, (newValue) => {
+  if (newValue && newValue.length > 0 && form.value.status === 'OPEN') {
+    form.value.status = 'ONGOING'
+  }
 })
 
 // 🔹 Converter urgência técnica para label amigável
@@ -136,8 +133,8 @@ const submitForm = () => {
 }
 </script>
 
-
 <style scoped lang="scss">
+/* 🔹 Seus estilos foram mantidos */
 .modal-overlay {
   position: fixed;
   inset: 0;

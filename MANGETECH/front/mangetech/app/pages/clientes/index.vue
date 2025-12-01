@@ -31,33 +31,35 @@
     <!-- Tabela -->
     <div v-if="clientesFiltrados.length > 0" class="table-container">
       <table class="data-table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>CPF/CNPJ</th>
-            <th>Email</th>
-            <th>Tasks Criadas</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(cli, index) in clientesFiltrados" :key="index">
-            <td>{{ cli.name }}</td>
-            <td>{{ cli.nif || '—' }}</td>
-            <td>{{ cli.email }}</td>
-            <td>{{ cli.tasks_created }}</td>
-            <td>
-              <span :class="cli.is_active ? 'ativo' : 'inativo'">
-                {{ cli.is_active ? 'Ativo' : 'Inativo' }}
-              </span>
-            </td>
-            <td>
-              <button class="btn-edit" @click="abrirEditarCliente(cli)">✏️ Editar</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>CPF/CNPJ</th>
+      <th>Email</th>
+      <th>Chamados</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr
+      v-for="(cli, index) in clientesFiltrados"
+      :key="index"
+      @click="abrirEditarCliente(cli)"
+      class="clickable-row"
+    >
+      <td>{{ cli.name }}</td>
+      <td>{{ cli.nif || '—' }}</td>
+      <td>{{ cli.email }}</td>
+      <td>{{ cli.chamados || cli.tasks_created || 0 }}</td>
+      <td>
+        <span :class="cli.is_active ? 'ativo' : 'inativo'">
+          {{ cli.is_active ? 'Ativo' : 'Inativo' }}
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
     </div>
 
     <p v-else class="empty-message">Nenhum cliente encontrado.</p>
@@ -136,12 +138,13 @@ const abrirNovoCliente = () => {
 const abrirEditarCliente = (cliente: any) => {
   isEdit.value = true
   formCliente.value = {
-    id: cliente.id || cliente.pk,   // ⬅ garante o uso correto
+    id: cliente.id ?? cliente.pk ?? cliente.user?.id,
     name: cliente.name,
     email: cliente.email,
     nif: cliente.nif,
     is_active: cliente.is_active,
   }
+  console.log("Cliente carregado para edição:", formCliente.value)
   exibirModal.value = true
 }
 

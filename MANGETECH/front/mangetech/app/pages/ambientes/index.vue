@@ -20,7 +20,7 @@
         />
       </div>
 
-      <button class="btn-primary" @click="novoAmbiente">
+      <button class="btn-primary" @click="abrirNovoAmbiente">
         + Novo Ambiente
       </button>
     </div>
@@ -30,7 +30,9 @@
       <div
         class="ambiente-card"
         v-for="(amb, index) in ambientesFiltrados"
-        :key="index"
+        :key="amb.id ?? index"
+        @click="abrirEditarAmbiente(amb)"
+        style="cursor:pointer"
       >
         <div class="ambiente-header">
           <h3>{{ amb.name }}</h3>
@@ -46,6 +48,16 @@
     <!-- EMPTY -->
     <p v-else class="empty-message">Nenhum ambiente encontrado.</p>
 
+    <!-- MODAL -->
+    <EnvironmentModal
+      v-if="showModal"
+      :show="showModal"
+      :modelValue="selectedAmbiente"
+      :usersList="usersList"
+      :isEdit="isEdit"
+      @close="showModal = false"
+      @submit="handleSave"
+    />
   </section>
 </template>
 
@@ -53,10 +65,22 @@
 definePageMeta({ layout: 'dashboard-layout' })
 
 import { ref, computed, onMounted } from 'vue'
+import {
+  getEnvironments,
+  createEnvironment,
+  updateEnvironment
+} from '@/services/environment.services'
+import { getUsers } from '@/services/user.service'
+import EnvironmentModal from '@/components/NewEnvironmentModal.vue'
 
 const ambientes = ref<any[]>([])
 const filtro = ref('')
+const showModal = ref(false)
+const usersList = ref<any[]>([])
+const isEdit = ref(false)
+const selectedAmbiente = ref<any | null>(null)
 
+// 🔹 Filtro
 const ambientesFiltrados = computed(() => {
   const term = filtro.value.toLowerCase()
   return ambientes.value.filter(a =>
@@ -64,20 +88,70 @@ const ambientesFiltrados = computed(() => {
   )
 })
 
-const novoAmbiente = () => {
-  navigateTo('/ambientes/novo')
+// 🔹 Abrir modal para novo
+const abrirNovoAmbiente = () => {
+  isEdit.value = false
+  selectedAmbiente.value = {
+    id: null,
+    name: '',
+    user_FK: '',
+    description: '',
+    is_active: true
+  }
+  showModal.value = true
+}
+
+// 🔹 Abrir modal para editar
+const abrirEditarAmbiente = (amb: any) => {
+  isEdit.value = true
+  selectedAmbiente.value = { ...amb }
+  showModal.value = true
+}
+
+// 🔹 Salvar (criar ou editar)
+const handleSave = async (data: any) => {
+  try {
+    const payload = {
+      ...data,
+      user_FK: typeof data.user_FK === 'object' ? data.user_FK.id : data.user_FK
+    }
+
+    if (isEdit.value) {
+      await updateEnvironment(payload.id, payload)
+    } else {
+      await createEnvironment(payload)
+    }
+
+    // 🎯 Força recarregar os dados completos do backend
+    await fetchAmbientes()
+    showModal.value = false
+
+  } catch (err) {
+    console.error("Erro ao salvar ambiente:", err)
+    alert("Erro ao salvar ambiente.")
+  }
+}
+
+
+// 🔹 Buscar ambientes
+const fetchAmbientes = async () => {
+  const data = await getEnvironments()
+  ambientes.value = data || []
+}
+
+// 🔹 Buscar usuários responsáveis
+const fetchUsers = async () => {
+  const data = await getUsers()
+  usersList.value = data.results || data || []
 }
 
 onMounted(async () => {
-  try {
-    const { data, error } = await getAmbientes()
-    if (error.value) console.error(error.value)
-    ambientes.value = data.value?.results || []
-  } catch (err) {
-    console.error('Erro ao buscar ambientes:', err)
-  }
+  await fetchAmbientes()
+  await fetchUsers()
 })
 </script>
+
+
 
 <style lang="css">
 .ambientes-page {

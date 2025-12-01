@@ -31,11 +31,10 @@
     <!-- GRAFICOS + AGENDA -->
     <div class="grid-main">
       <div class="chart-card">
-  <h3>Distribuição de Chamados por Status</h3>
-  <canvas id="statusChart"></canvas>
-</div>
+        <h3>Distribuição de Chamados por Status</h3>
+        <canvas id="statusChart"></canvas>
+      </div>
 
-      <!-- AGENDA -->
       <div class="agenda-card">
         <div class="agenda-header">
           <h3>Agenda</h3>
@@ -53,35 +52,31 @@
 
           <div class="calendar-grid">
             <button
-              v-for="(day, index) in calendarDays"
+              v-for="(day, index) in calendarDays || []"
               :key="index"
               type="button"
               class="calendar-day"
               :class="{
                 'other-month': !day.isCurrentMonth,
-                'has-agenda': day.items.length,
+                'has-agenda': day.items?.length,
                 'selected': selectedDate && sameDay(day.date, selectedDate)
               }"
               @click="selectDay(day)"
             >
               <span class="day-number">{{ day.date.getDate() }}</span>
-              <span v-if="day.items.length" class="dot"></span>
+              <span v-if="day.items?.length" class="dot"></span>
             </button>
           </div>
         </div>
 
-        <div v-if="selectedItems.length" class="agenda-details">
+        <div v-if="selectedItems?.length" class="agenda-details">
           <h4>Compromissos de {{ selectedDateFormatted }}</h4>
           <ul>
-            <li v-for="item in selectedItems" :key="item.id">
-              {{ item.tarefa }}
-            </li>
+            <li v-for="item in selectedItems" :key="item.id">{{ item.tarefa }}</li>
           </ul>
         </div>
 
-        <p v-else class="agenda-empty">
-          Nenhum compromisso para o dia selecionado.
-        </p>
+        <p v-else class="agenda-empty">Nenhum compromisso para o dia selecionado.</p>
       </div>
     </div>
 
@@ -89,34 +84,109 @@
 </template>
 
 <script setup>
-definePageMeta({
-  layout: 'dashboard-layout'
-})
+definePageMeta({ layout: 'dashboard-layout' })
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getCurrentUser } from '~/services/auth.services'
 import { getTasks } from '~/services/task.services'
 import { getUsers } from '~/services/user.service'
 import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 
-// === STATES ===
+// STATES
 const user = ref(null)
 const chamadosAbertos = ref(0)
 const mensagens = ref(0)
 const totalClientes = ref(0)
 const chamados = ref([])
 
-// === AGENDA FIXA ===
-const agenda = [
-  { id: 1, dia: 'Segunda', tarefa: 'Revisar chamados pendentes' },
-  { id: 2, dia: 'Terça', tarefa: 'Visita técnica' },
-  { id: 3, dia: 'Quarta', tarefa: 'Instalação de equipamentos' },
-  { id: 4, dia: 'Quinta', tarefa: 'Treinamento' },
-  { id: 5, dia: 'Sexta', tarefa: 'Revisão final' }
-]
+// Função robusta para status
+const getLatestStatus = (task) => {
+  return (
+    task?.TaskStatus_task_FK?.at(-1)?.status ||
+    task?.latest_status ||
+    task?.status ||
+    ''
+  )?.toString().trim().toUpperCase()
+}
 
-// === CALENDÁRIO ===
+// Normalizar texto
+const normalize = (str) =>
+  str?.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || ''
+
+// FETCH DATA
+onMounted(async () => {
+  try {
+    user.value = await getCurrentUser()
+
+    const tasksData = await getTasks()
+    chamados.value = tasksData?.data?.value?.results || tasksData?.data?.results || tasksData || []
+
+    console.log("📝 Status real de cada chamado:", chamados.value.map(t => ({
+      id: t.id,
+      status: getLatestStatus(t)
+    })))
+
+    // Agora só conta OPEN e ONGOING
+    chamadosAbertos.value = chamados.value.filter(t => {
+  const status = getLatestStatus(t)
+
+  return (
+    status === 'OPEN' ||     // Aberto
+    status === 'WAITING_RESPONSIBLE' || // Aguardando responsável
+    status === 'ONGOING'    // Em andamento
+  )
+}).length
+    mensagens.value = chamados.value.filter(t => normalize(t.type) === 'mensagem').length
+
+    const users = await getUsers()
+    totalClientes.value = users.results ? users.results.length : users.length
+
+    renderCharts()
+  } catch (error) {
+    console.error('Erro ao carregar dados:', error)
+  }
+})
+
+/* ==================== GRÁFICO ==================== */
+let statusChartInstance = null
+
+function renderCharts() {
+  const statusCounts = chamados.value.reduce((acc, item) => {
+    const status = getLatestStatus(item) || 'NÃO INFORMADO'
+    acc[status] = (acc[status] || 0) + 1
+    return acc
+  }, {})
+
+  const ctx1 = document.getElementById('statusChart')
+
+  if (statusChartInstance) {
+    statusChartInstance.destroy()
+    statusChartInstance = null
+  }
+
+  if (ctx1) {
+    statusChartInstance = new Chart(ctx1, {
+      type: 'pie',
+      data: {
+        labels: Object.keys(statusCounts),
+        datasets: [{ data: Object.values(statusCounts) }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } },
+        maintainAspectRatio: false,
+        responsive: true
+      }
+    })
+  }
+}
+
+// Limpa gráfico ao sair da página
+onUnmounted(() => {
+  if (statusChartInstance) statusChartInstance.destroy()
+})
+
+/* ==================== CALENDÁRIO ==================== */
 const currentMonth = ref(new Date())
 const selectedDate = ref(new Date())
 
@@ -126,36 +196,36 @@ const monthNames = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
 
-const monthLabel = computed(() => {
-  const d = currentMonth.value
-  return `${monthNames[d.getMonth()]} de ${d.getFullYear()}`
-})
+const monthLabel = computed(() =>
+  `${monthNames[currentMonth.value.getMonth()]} de ${currentMonth.value.getFullYear()}`
+)
+
+const agenda = [
+  { id: 1, dia: 'Segunda', tarefa: 'Revisar chamados pendentes' },
+  { id: 2, dia: 'Terça', tarefa: 'Visita técnica' },
+  { id: 3, dia: 'Quarta', tarefa: 'Instalação de equipamentos' },
+  { id: 4, dia: 'Quinta', tarefa: 'Treinamento' },
+  { id: 5, dia: 'Sexta', tarefa: 'Revisão final' }
+]
 
 const weekdayMap = {
-  0: 'Domingo',
-  1: 'Segunda',
-  2: 'Terça',
-  3: 'Quarta',
-  4: 'Quinta',
-  5: 'Sexta',
-  6: 'Sábado'
+  0: 'Domingo', 1: 'Segunda', 2: 'Terça',
+  3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado'
 }
 
-const getAgendaItemsForDate = (date) => {
-  const weekdayName = weekdayMap[date.getDay()]
-  return agenda.filter(a => a.dia === weekdayName)
-}
+const getAgendaItemsForDate = (date) =>
+  agenda.filter(a => a.dia === weekdayMap[date.getDay()])
 
 const calendarDays = computed(() => {
   const year = currentMonth.value.getFullYear()
   const month = currentMonth.value.getMonth()
+  const days = []
 
   const firstDayOfMonth = new Date(year, month, 1)
   const firstWeekday = firstDayOfMonth.getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const daysInPrevMonth = new Date(year, month, 0).getDate()
 
-  const days = []
   for (let i = firstWeekday - 1; i >= 0; i--) {
     const date = new Date(year, month - 1, daysInPrevMonth - i)
     days.push({ date, isCurrentMonth: false, items: getAgendaItemsForDate(date) })
@@ -176,9 +246,9 @@ const calendarDays = computed(() => {
 })
 
 const sameDay = (d1, d2) =>
-  d1.getFullYear() === d2.getFullYear() &&
-  d1.getMonth() === d2.getMonth() &&
-  d1.getDate() === d2.getDate()
+  d1?.getFullYear() === d2?.getFullYear() &&
+  d1?.getMonth() === d2?.getMonth() &&
+  d1?.getDate() === d2?.getDate()
 
 const selectedItems = computed(() =>
   selectedDate.value ? getAgendaItemsForDate(selectedDate.value) : []
@@ -202,57 +272,6 @@ const nextMonth = () => {
 
 const selectDay = (day) => {
   selectedDate.value = day.date
-}
-
-// === FETCH REAL DATA ===
-onMounted(async () => {
-  try {
-    user.value = await getCurrentUser()
-
-    const tasksData = await getTasks()
-    chamados.value = tasksData.results || []
-
-    chamadosAbertos.value = chamados.value.filter(t => t.status?.toLowerCase() === 'aberto').length
-    mensagens.value = chamados.value.filter(t => t.type?.toLowerCase() === 'mensagem').length
-
-    const users = await getUsers()
-    totalClientes.value = users.results ? users.results.length : users.length
-
-    renderCharts()
-  } catch (error) {
-    console.error('Erro ao carregar dados:', error)
-  }
-})
-
-// === GRÁFICOS ===
-function renderCharts() {
-  const statusCounts = chamados.value.reduce((acc, item) => {
-    acc[item.status] = (acc[item.status] || 0) + 1
-    return acc
-  }, {})
-
-  const ctx1 = document.getElementById('statusChart')
-  if (ctx1) {
-    new Chart(ctx1, {
-      type: 'pie',
-      data: {
-        labels: Object.keys(statusCounts),
-        datasets: [{
-          data: Object.values(statusCounts)
-        }]
-      },
-      options: {
-        plugins: { 
-          title: { 
-            display: false 
-          },
-          legend: {
-            position: 'bottom'
-          }
-        }
-      }
-    })
-  }
 }
 </script>
 
