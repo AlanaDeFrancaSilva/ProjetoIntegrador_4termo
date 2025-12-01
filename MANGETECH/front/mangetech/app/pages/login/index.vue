@@ -30,7 +30,7 @@
 
       <div class="signup-box">
         <p>Ainda não tem uma conta?</p>
-        <NuxtLink to="/inicio" class="btn-signup">Criar conta</NuxtLink>
+        <NuxtLink to="/signup" class="btn-signup">Criar conta</NuxtLink>
       </div>
     </div>
   </div>

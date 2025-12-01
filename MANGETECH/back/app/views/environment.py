@@ -4,4 +4,8 @@ from ..serializers import *
 
 class EnvironmentView(ModelViewSet):
     queryset = Environment.objects.all()
-    serializer_class = EnvironmentSerializer
+
+    def get_serializer_class(self):
+        if self.request.method in ['GET']:
+            return EnvironmentReadSerializer
+        return EnvironmentWriteSerializer
