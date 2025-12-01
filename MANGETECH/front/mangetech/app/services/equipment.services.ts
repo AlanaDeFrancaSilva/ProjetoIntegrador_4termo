@@ -1,80 +1,77 @@
 import type { Equipment } from '~/models/equipment.model'
 
-/**
- * 🔹 Buscar lista de equipamentos com filtros
- * Suporta busca por nome, categoria, ambiente ou qualquer parâmetro aceito pela API
- */
+/** Normalizar retorno da API */
+const norm = (data: any) =>
+  data?.data?.value?.results ||
+  data?.data?.results ||
+  data?.results ||
+  data ||
+  []
+
+/** Buscar equipamentos */
 export const getEquipments = async (params?: Record<string, any>) => {
   const { $authFetch } = useNuxtApp()
   const query = new URLSearchParams(params || {}).toString()
   const { data } = await $authFetch(`http://localhost:8001/api/equipment/?${query}`)
-  return data.value?.results || data.value || []
+  return norm(data.value)
 }
 
-/**
- * 🔹 Buscar equipamento por ID
- */
+/** Buscar por ID */
 export const getEquipmentById = async (id: number | string) => {
   const { $authFetch } = useNuxtApp()
   const { data } = await $authFetch(`http://localhost:8001/api/equipment/${id}/`)
   return data.value
 }
 
-/**
- * 🔹 Criar novo equipamento
- */
-export const createEquipment = async (equipmentData: Partial<Equipment>) => {
+/** Criar equipamento */
+export const createEquipment = async (equipmentData: any) => {
   const { $authFetch } = useNuxtApp()
-  try {
-    const { data } = await $authFetch(`http://localhost:8001/api/equipment/`, {
-      method: 'POST',
-      body: equipmentData,
-    })
-    return data.value
-  } catch (error: any) {
-    console.error("Erro ao criar equipamento:", error?.data || error)
-    alert(JSON.stringify(error?.data, null, 2)) // ⚠️ Mostra o erro real
-    throw error
+
+  const payload = {
+    name: equipmentData.name,
+    code: equipmentData.code,
+    category_FK: equipmentData.category_FK,     // ID
+    environment_FK: equipmentData.environment_FK, // ID
   }
-}
 
-
-/**
- * 🔹 Atualizar equipamento
- */
-export const updateEquipment = async (id: number | string, equipmentData: Partial<Equipment>) => {
-  const { $authFetch } = useNuxtApp()
-  const { data } = await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
-    method: 'PUT',
-    body: equipmentData,
+  const { data } = await $authFetch(`http://localhost:8001/api/equipment/`, {
+    method: 'POST',
+    body: payload,
   })
+
   return data.value
 }
 
-/**
- * 🔹 Deletar equipamento
- */
-export const deleteEquipment = async (id: number | string) => {
+/** Atualizar equipamento */
+export const updateEquipment = async (id: number | string, data: any) => {
   const { $authFetch } = useNuxtApp()
-  return await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
-    method: 'DELETE',
+
+  const payload = {
+    name: data.name,
+    code: data.code,
+    description: data.description,
+    category_FK: { id: data.category_FK },
+    environment_FK: { id: data.environment_FK }
+  }
+
+  const response = await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
+    method: "PUT",
+    body: payload
   })
+
+  return response.data?.value || response.data
 }
 
-/**
- * 🔹 Buscar Categorias (para drop-down)
- */
+/** Buscar Categorias */
 export const getCategories = async () => {
   const { $authFetch } = useNuxtApp()
   const { data } = await $authFetch(`http://localhost:8001/api/category/`)
-  return data.value?.results || data.value || []
+  return norm(data.value)
 }
 
-/**
- * 🔹 Buscar Ambientes (para drop-down)
- */
+/** Buscar Ambientes */
 export const getEnvironments = async () => {
   const { $authFetch } = useNuxtApp()
   const { data } = await $authFetch(`http://localhost:8001/api/environment/`)
-  return data.value?.results || data.value || []
+  return norm(data.value)
 }

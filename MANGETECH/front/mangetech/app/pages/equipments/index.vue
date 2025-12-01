@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'dashboard-layout' })
 
+import { ref, watch, onMounted } from 'vue'
 import { getEquipments, createEquipment, updateEquipment } from '~/services/equipment.services'
 import { getCategories } from '~/services/category.services'
 import { getEnvironments } from '~/services/environment.services'
@@ -19,25 +20,50 @@ const selectedEquipment = ref<any | null>(null)
 const categoriesList = ref<any[]>([])
 const environmentsList = ref<any[]>([])
 
-// 🔹 Buscar categorias e ambientes do backend
+/* ===========================================================
+    FETCH UNIVERSAL — FUNCIONA COM QUALQUER FORMATO DA API
+=========================================================== */
+const normalizeApiReturn = (data: any) => {
+  return (
+    data?.data?.value?.results ||
+    data?.data?.results ||
+    data?.results ||
+    (Array.isArray(data) ? data : []) ||
+    []
+  )
+}
+
+/* ===========================================================
+                BUSCAR CATEGORIAS
+=========================================================== */
 const fetchCategories = async () => {
   try {
     const data = await getCategories()
-    console.log('🔎 Categorias recebidas da API:', data)
-    categoriesList.value = Array.isArray(data) ? data : data.results ?? []
+    console.log("📦 Categorias recebidas:", data)
+
+    categoriesList.value = normalizeApiReturn(data)
   } catch (e) {
-    console.error('❌ Erro ao buscar categorias:', e)
+    console.error("❌ Erro ao buscar categorias:", e)
   }
 }
 
-
-
+/* ===========================================================
+                BUSCAR AMBIENTES
+=========================================================== */
 const fetchEnvironments = async () => {
-  const data = await getEnvironments()
-  environmentsList.value = data.results || data || []
+  try {
+    const data = await getEnvironments()
+    console.log("📦 Ambientes recebidos:", data)
+
+    environmentsList.value = normalizeApiReturn(data)
+  } catch (e) {
+    console.error("❌ Erro ao buscar ambientes:", e)
+  }
 }
 
-// 🔹 Buscar equipamentos
+/* ===========================================================
+                BUSCAR EQUIPAMENTOS
+=========================================================== */
 const fetchEquipmentsData = async () => {
   try {
     isLoading.value = true
@@ -45,17 +71,24 @@ const fetchEquipmentsData = async () => {
 
     if (searchQuery.value) params.name = searchQuery.value
 
-    const data = await getEquipments(params)  // Retorna a lista direta
-    equipments.value = data                  // Já é um array
+    const data = await getEquipments(params)
+
+    equipments.value =
+      data?.data?.value?.results ||
+      data?.data?.results ||
+      data?.results ||
+      data ||
+      []
   } catch (err) {
-    console.error('Erro ao buscar equipamentos:', err)
+    console.error("Erro ao buscar equipamentos:", err)
   } finally {
     isLoading.value = false
   }
 }
 
-
-// 🔹 Abrir modal de detalhes
+/* ===========================================================
+                ABRIR MODAL DE DETALHES
+=========================================================== */
 const openEquipmentDetails = async (equipment: any) => {
   await fetchCategories()
   await fetchEnvironments()
@@ -63,21 +96,27 @@ const openEquipmentDetails = async (equipment: any) => {
   showEquipmentDetailsModal.value = true
 }
 
-// 🔹 Criar novo equipamento
+/* ===========================================================
+                SALVAR NOVO EQUIPAMENTO
+=========================================================== */
 const handleSave = async (newData: any) => {
   await createEquipment(newData)
   await fetchEquipmentsData()
   showNewEquipmentModal.value = false
 }
 
-// 🔹 Atualizar equipamento
+/* ===========================================================
+                ATUALIZAR EQUIPAMENTO
+=========================================================== */
 const handleUpdate = async (updatedData: any) => {
   await updateEquipment(updatedData.id, updatedData)
   await fetchEquipmentsData()
   showEquipmentDetailsModal.value = false
 }
 
-// 🔹 Watchers
+/* ===========================================================
+                WATCHERS
+=========================================================== */
 watch(showNewEquipmentModal, async (isOpen) => {
   if (isOpen) {
     await fetchCategories()
@@ -88,6 +127,10 @@ watch(showNewEquipmentModal, async (isOpen) => {
 onMounted(fetchEquipmentsData)
 watch(searchQuery, fetchEquipmentsData)
 </script>
+
+
+
+
 
 <template>
   <div class="page-container">
@@ -163,6 +206,11 @@ watch(searchQuery, fetchEquipmentsData)
     </div>
   </div>
 </template>
+
+
+
+
+
 <style scoped lang="scss">
 .page-container {
   display: flex;
@@ -250,32 +298,6 @@ watch(searchQuery, fetchEquipmentsData)
   background-color: #172554;
 }
 
-.select-filter {
-  appearance: none;
-  background-color: #ffffff !important;
-  color: #333;
-  border: 1px solid #1e293b;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.select-filter:focus {
-  outline: none;
-  border-color:#1e293b;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
-}
-
-select option {
-  background-color: #ffffff !important;
-  color: #333;
-}
-.select-filter:hover,
-.select-filter:focus {
-  border-color: #1e293b;
-}
-
 /* 📋 Tabela */
 .table-container {
   overflow-x: auto;
@@ -302,74 +324,6 @@ select option {
   font-size: 14px;
 }
 
-/* 🔵 Badges de urgência (se quiser usar depois) */
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  display: inline-block;
-  text-align: center;
-}
-
-.Baixa { background-color: #d1fae5; color: #065f46; }
-.Média { background-color: #fef3c7; color: #78350f; }
-.Alta { background-color: #fee2e2; color: #991b1b; }
-.ExtraAlta { background-color: #fecaca; color: #7f1d1d; }
-
-/* 🌀 Loading */
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  color: #6b7280;
-}
-
-.page-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* 🎯 Badges de Urgência — estilo dashboard */
-.urgency-badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 18px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: capitalize;
-}
-
-/* 🟢 Baixa */
-.urgency-badge.LOW {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-  border: 1px solid #1b5e20;
-}
-
-/* 🟡 Média */
-.urgency-badge.MEDIUM {
-  background-color: #fff9c4;
-  color: #795548;
-  border: 1px solid #795548;
-}
-
-/* 🟠 Alta */
-.urgency-badge.HIGH {
-  background-color: #ffe0b2;
-  color: #e65100;
-  border: 1px solid #e65100;
-}
-
-/* 🔴 Extra Alta */
-.urgency-badge.EXTRA_HIGH {
-  background-color: #ffebee;
-  color: #b71c1c;
-  border: 1px solid #b71c1c;
-}
-
 .clickable-row {
   cursor: pointer;
   transition: background-color 0.2s;
@@ -379,36 +333,12 @@ select option {
   background-color: #f3f4f6;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 18px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: capitalize;
-}
-
-.status-badge.ABERTO {
-  background-color: #e0f2fe;
-  color: #063970;
-  border: 1px solid #063970;
-}
-
-.status-badge.EM_ANDAMENTO {
-  background-color: #fff4e6;
-  color: #b75e00;
-  border: 1px solid #b75e00;
-}
-
-.status-badge.CONCLUIDO {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-  border: 1px solid #1b5e20;
-}
-
-.status-badge.CANCELADO {
-  background-color: #ffebee;
-  color: #b71c1c;
-  border: 1px solid #b71c1c;
+/* Loading */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
 }
 </style>

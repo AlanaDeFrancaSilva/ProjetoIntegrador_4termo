@@ -13,8 +13,8 @@
     <!-- CARDS SUPERIORES -->
     <div class="cards-row">
       <div class="info-card">
-        <p class="title">Chamados em Aberto</p>
-        <h2>{{ chamadosAbertos }}</h2>
+        <p class="title">Total de Chamados</p>
+        <h2>{{ totalChamados }}</h2>
       </div>
 
       <div class="info-card">
@@ -52,7 +52,7 @@
 
           <div class="calendar-grid">
             <button
-              v-for="(day, index) in calendarDays || []"
+              v-for="(day, index) in calendarDays"
               :key="index"
               type="button"
               class="calendar-day"
@@ -93,28 +93,44 @@ import { getUsers } from '~/services/user.service'
 import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 
-// STATES
+/* ======================================
+            ESTADOS
+====================================== */
 const user = ref(null)
-const chamadosAbertos = ref(0)
+const totalChamados = ref(0)
 const mensagens = ref(0)
 const totalClientes = ref(0)
 const chamados = ref([])
 
-// Função robusta para status
-const getLatestStatus = (task) => {
-  return (
-    task?.TaskStatus_task_FK?.at(-1)?.status ||
-    task?.latest_status ||
-    task?.status ||
-    ''
-  )?.toString().trim().toUpperCase()
+/* ======================================
+        MAPA PARA PT-BR NO GRÁFICO
+====================================== */
+const statusLabels = {
+  OPEN: 'Aberto',
+  WAITING_RESPONSIBLE: 'Aguardando Responsável',
+  ONGOING: 'Em Andamento',
+  DONE: 'Concluído',
+  FINISHED: 'Finalizado',
+  CANCELLED: 'Cancelado'
 }
 
-// Normalizar texto
+/* ======================================
+        FUNÇÃO FINAL DE STATUS
+====================================== */
+const getLatestStatus = (task) => {
+  const arr = task?.TaskStatus_task_FK
+  if (!arr || arr.length === 0) return null
+  const raw = arr[arr.length - 1]?.status || null
+  if (!raw) return null
+  return raw.toString().trim().toUpperCase()
+}
+
 const normalize = (str) =>
   str?.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || ''
 
-// FETCH DATA
+/* ======================================
+            BUSCAR DADOS
+====================================== */
 onMounted(async () => {
   try {
     user.value = await getCurrentUser()
@@ -122,21 +138,8 @@ onMounted(async () => {
     const tasksData = await getTasks()
     chamados.value = tasksData?.data?.value?.results || tasksData?.data?.results || tasksData || []
 
-    console.log("📝 Status real de cada chamado:", chamados.value.map(t => ({
-      id: t.id,
-      status: getLatestStatus(t)
-    })))
+    totalChamados.value = chamados.value.filter(t => getLatestStatus(t) !== null).length
 
-    // Agora só conta OPEN e ONGOING
-    chamadosAbertos.value = chamados.value.filter(t => {
-  const status = getLatestStatus(t)
-
-  return (
-    status === 'OPEN' ||     // Aberto
-    status === 'WAITING_RESPONSIBLE' || // Aguardando responsável
-    status === 'ONGOING'    // Em andamento
-  )
-}).length
     mensagens.value = chamados.value.filter(t => normalize(t.type) === 'mensagem').length
 
     const users = await getUsers()
@@ -148,45 +151,48 @@ onMounted(async () => {
   }
 })
 
-/* ==================== GRÁFICO ==================== */
+/* ======================================
+                GRÁFICO
+====================================== */
 let statusChartInstance = null
 
 function renderCharts() {
   const statusCounts = chamados.value.reduce((acc, item) => {
-    const status = getLatestStatus(item) || 'NÃO INFORMADO'
+    const status = getLatestStatus(item)
+    if (!status) return acc
     acc[status] = (acc[status] || 0) + 1
     return acc
   }, {})
 
-  const ctx1 = document.getElementById('statusChart')
+  const ctx = document.getElementById('statusChart')
+  if (!ctx) return
 
-  if (statusChartInstance) {
-    statusChartInstance.destroy()
-    statusChartInstance = null
-  }
+  if (statusChartInstance) statusChartInstance.destroy()
 
-  if (ctx1) {
-    statusChartInstance = new Chart(ctx1, {
-      type: 'pie',
-      data: {
-        labels: Object.keys(statusCounts),
-        datasets: [{ data: Object.values(statusCounts) }]
-      },
-      options: {
-        plugins: { legend: { position: 'bottom' } },
-        maintainAspectRatio: false,
-        responsive: true
-      }
-    })
-  }
+  // Conversão para PT-BR no gráfico
+  const labelsPT = Object.keys(statusCounts).map(status => statusLabels[status] || status)
+
+  statusChartInstance = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: labelsPT,
+      datasets: [{ data: Object.values(statusCounts) }]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom' } },
+      maintainAspectRatio: false,
+      responsive: true
+    }
+  })
 }
 
-// Limpa gráfico ao sair da página
 onUnmounted(() => {
   if (statusChartInstance) statusChartInstance.destroy()
 })
 
-/* ==================== CALENDÁRIO ==================== */
+/* ======================================
+              CALENDÁRIO
+====================================== */
 const currentMonth = ref(new Date())
 const selectedDate = ref(new Date())
 

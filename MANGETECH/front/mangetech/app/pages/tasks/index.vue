@@ -11,7 +11,7 @@ import TaskDetailsModal from '~/components/TaskDetailsModal.vue'
 
 const tasks = ref<any[]>([])
 const searchQuery = ref('')
-const statusFilter = ref('')
+const urgencyFilter = ref('')
 const isLoading = ref(false)
 const showNewTaskModal = ref(false)
 
@@ -22,7 +22,7 @@ const urgencyOptions = ref<any[]>([])
 const selectedTask = ref<any | null>(null)
 const showTaskDetailsModal = ref(false)
 
-// 🔹 Mapa dos status
+// Mapas
 const formatStatus = (status: string) => {
   const map: Record<string, string> = {
     OPEN: 'Aberto',
@@ -32,22 +32,20 @@ const formatStatus = (status: string) => {
     FINISHED: 'Finalizado',
     CANCELLED: 'Cancelado'
   }
-  return map[status] || status || 'Sem Status'
+  return map[status] || status
 }
 
-
-// 🔹 Mapa das urgências
 const formatUrgency = (level: string) => {
   const map: Record<string, string> = {
     LOW: 'Baixa',
     MEDIUM: 'Média',
     HIGH: 'Alta',
-    EXTRA_HIGH: 'Extra Alta',
+    EXTRA_HIGH: 'Extra Alta'
   }
   return map[level] || level
 }
 
-// 🔹 Buscar dados auxiliares
+// Buscar auxiliares
 const fetchUsers = async () => {
   const data = await getUsers()
   usersList.value = data.results || data || []
@@ -66,14 +64,18 @@ const fetchUrgencyLevels = async () => {
   }))
 }
 
-// 🔹 Buscar chamados com filtro de status
+// Último status
+const getLatestStatus = (task) =>
+  task.TaskStatus_task_FK?.at(-1)?.status || 'Sem Status'
+
+// Buscar chamados (sem status filter)
 const fetchTasks = async () => {
   try {
     isLoading.value = true
     const params: Record<string, any> = {}
 
     if (searchQuery.value) params.name = searchQuery.value
-    if (statusFilter.value) params.TaskStatus_task_FK__status = statusFilter.value
+    if (urgencyFilter.value) params.urgency_level = urgencyFilter.value
 
     const { data } = await getTasks(params)
     tasks.value = data.value?.results || data.results || data || []
@@ -84,10 +86,7 @@ const fetchTasks = async () => {
   }
 }
 
-const getLatestStatus = (task) =>
-  task.TaskStatus_task_FK?.at(-1)?.status || 'Sem Status'
-
-// 🔹 Abrir modal de detalhes
+// Abrir modal de detalhes
 const openTaskDetails = async (task: any) => {
   await fetchUrgencyLevels()
   await fetchUsers()
@@ -96,7 +95,7 @@ const openTaskDetails = async (task: any) => {
   showTaskDetailsModal.value = true
 }
 
-// 🔹 Criar e atualizar chamados
+// Criar e atualizar
 const handleSave = async (newData: any) => {
   await createTask(newData)
   await fetchTasks()
@@ -118,7 +117,9 @@ watch(showNewTaskModal, async (isOpen) => {
 })
 
 onMounted(fetchTasks)
+
 watch(searchQuery, fetchTasks)
+watch(urgencyFilter, fetchTasks)
 </script>
 
 <template>
@@ -128,7 +129,7 @@ watch(searchQuery, fetchTasks)
       <p>Gerencie ordens de serviço com controle completo</p>
     </div>
 
-    <!-- 🔎 Ações -->
+    <!-- Ações -->
     <div class="actions-bar">
       <div class="search-box">
         <span class="icon-search">🔍</span>
@@ -138,16 +139,14 @@ watch(searchQuery, fetchTasks)
       <div class="actions-buttons">
         <button class="btn-primary" @click="showNewTaskModal = true">+ Novo Chamado</button>
 
-        <!-- 📌 Filtro de Status -->
-      <select v-model="statusFilter" @change="fetchTasks" class="select-filter">
-  <option value="">Todos os Status</option>
-  <option value="OPEN">Aberto</option>
-  <option value="WAITING_RESPONSIBLE">Aguardando Responsável</option>
-  <option value="ONGOING">Em Andamento</option>
-  <option value="DONE">Concluído</option>
-  <option value="FINISHED">Finalizado</option>
-  <option value="CANCELLED">Cancelado</option>
-</select>
+        <!-- ÚNICO FILTRO: URGÊNCIA -->
+        <select v-model="urgencyFilter" @change="fetchTasks" class="select-filter">
+          <option value="">Todas as Urgências</option>
+          <option value="LOW">Baixa</option>
+          <option value="MEDIUM">Média</option>
+          <option value="HIGH">Alta</option>
+          <option value="EXTRA_HIGH">Extra Alta</option>
+        </select>
       </div>
 
       <NewTaskModal
@@ -160,7 +159,7 @@ watch(searchQuery, fetchTasks)
       />
     </div>
 
-    <!-- 📋 Tabela de Chamados -->
+    <!-- Tabela -->
     <div v-if="!isLoading" class="table-container">
       <table class="data-table">
         <thead>
@@ -169,10 +168,11 @@ watch(searchQuery, fetchTasks)
             <th>Solicitante</th>
             <th>Título</th>
             <th>Data de Abertura</th>
-            <th>Urgência</th>
             <th>Status</th>
+            <th>Urgência</th>
           </tr>
         </thead>
+
         <tbody>
           <tr
             v-for="task in tasks"
@@ -181,19 +181,20 @@ watch(searchQuery, fetchTasks)
             @click="openTaskDetails(task)"
           >
             <td>{{ task.id }}</td>
-            <td>{{ task.creator_FK?.name || '—' }}</td>
+            <td>{{ task.creator_FK?.name }}</td>
             <td>{{ task.name }}</td>
             <td>{{ new Date(task.creation_date).toLocaleDateString('pt-BR') }}</td>
+
+            <td>
+              <span :class="'status-badge ' + getLatestStatus(task)">
+                {{ formatStatus(getLatestStatus(task)) }}
+              </span>
+            </td>
+
             <td>
               <span :class="'urgency-badge ' + task.urgency_level">
                 {{ formatUrgency(task.urgency_level) }}
               </span>
-            </td>
-            <td>
-              <span :class="'status-badge ' + getLatestStatus(task)">
-  {{ formatStatus(getLatestStatus(task)) }}
-</span>
-
             </td>
           </tr>
         </tbody>
@@ -213,6 +214,7 @@ watch(searchQuery, fetchTasks)
     </div>
   </div>
 </template>
+
 <style scoped lang="scss">
 .page-container {
   display: flex;
@@ -438,27 +440,40 @@ select option {
   text-transform: capitalize;
 }
 
-.status-badge.ABERTO {
+.status-badge.OPEN {
   background-color: #e0f2fe;
-  color: #063970;
-  border: 1px solid #063970;
+  color: #0369a1;
+  border: 1px solid #0369a1;
 }
 
-.status-badge.EM_ANDAMENTO {
-  background-color: #fff4e6;
-  color: #b75e00;
-  border: 1px solid #b75e00;
+.status-badge.WAITING_RESPONSIBLE {
+  background-color: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #854d0e;
+}
+.status-badge.ONGOING {
+  background-color: #ffedd5;
+  color: #b45309;
+  border: 1px solid #b45309;
 }
 
-.status-badge.CONCLUIDO {
+
+.status-badge.FINISHED {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #1e40af;
+}
+
+
+.status-badge.CANCELLED {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #b91c1c;
+}
+
+.status-badge.DONE {
   background-color: #e8f5e9;
   color: #1b5e20;
   border: 1px solid #1b5e20;
-}
-
-.status-badge.CANCELADO {
-  background-color: #ffebee;
-  color: #b71c1c;
-  border: 1px solid #b71c1c;
 }
 </style>

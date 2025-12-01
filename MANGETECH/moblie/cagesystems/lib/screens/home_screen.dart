@@ -1,13 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-import 'chamados_screen.dart';
-import 'tecnicos_screen.dart';
-import 'clientes_screen.dart';
-import 'monitoramento_screen.dart';
-import 'ativos_screen.dart';
-import 'ambientes_screen.dart';
-import 'documentacao_screen.dart';
+
 import 'home_screen.dart';
 
 // ----------------------------------
