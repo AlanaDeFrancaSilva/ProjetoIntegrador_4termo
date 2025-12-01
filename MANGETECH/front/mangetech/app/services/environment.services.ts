@@ -1,4 +1,5 @@
-import api from './api'
+// app/services/environment.services.ts
+import { useNuxtApp } from '#app'
 
 export const getEnvironments = async () => {
   const { $authFetch } = useNuxtApp()

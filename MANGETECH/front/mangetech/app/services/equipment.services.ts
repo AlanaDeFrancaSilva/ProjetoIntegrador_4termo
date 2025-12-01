@@ -25,12 +25,19 @@ export const getEquipmentById = async (id: number | string) => {
  */
 export const createEquipment = async (equipmentData: Partial<Equipment>) => {
   const { $authFetch } = useNuxtApp()
-  const { data } = await $authFetch(`http://localhost:8001/api/equipment/`, {
-    method: 'POST',
-    body: equipmentData,
-  })
-  return data.value
+  try {
+    const { data } = await $authFetch(`http://localhost:8001/api/equipment/`, {
+      method: 'POST',
+      body: equipmentData,
+    })
+    return data.value
+  } catch (error: any) {
+    console.error("Erro ao criar equipamento:", error?.data || error)
+    alert(JSON.stringify(error?.data, null, 2)) // ⚠️ Mostra o erro real
+    throw error
+  }
 }
+
 
 /**
  * 🔹 Atualizar equipamento

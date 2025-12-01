@@ -38,14 +38,15 @@ const fetchEquipmentsData = async () => {
 
     if (searchQuery.value) params.name = searchQuery.value
 
-    const { data } = await getEquipments(params)
-    equipments.value = data.value?.results || data.results || data || []
+    const data = await getEquipments(params)  // Retorna a lista direta
+    equipments.value = data                  // Já é um array
   } catch (err) {
     console.error('Erro ao buscar equipamentos:', err)
   } finally {
     isLoading.value = false
   }
 }
+
 
 // 🔹 Abrir modal de detalhes
 const openEquipmentDetails = async (equipment: any) => {

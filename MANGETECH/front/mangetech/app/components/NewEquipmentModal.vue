@@ -63,10 +63,15 @@ const form = ref({
 const close = () => emit('close')
 
 const submitForm = () => {
-  emit('save', form.value)
+  emit('save', {
+    ...form.value,
+    category_FK: { id: form.value.category_FK },
+    environment_FK: { id: form.value.environment_FK },
+  })
   close()
 }
 </script>
+
 
 <style scoped lang="scss">
 .modal-overlay {
