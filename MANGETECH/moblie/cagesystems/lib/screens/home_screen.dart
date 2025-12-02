@@ -1,337 +1,261 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-
-import 'home_screen.dart';
-
-// ----------------------------------
-// HOME SCREEN COMPLETA + NAVEGAÇÃO
-// ----------------------------------
+// TELAS
+import 'package:cagesystems/screens/chamados/chamados_screen.dart';
+import 'package:cagesystems/screens/ativos/ativos_lista_screen.dart';
+import 'package:cagesystems/screens/qrcode/qr_scan_screen.dart';
+import 'package:cagesystems/screens/monitoramento/dashboard_monitoramento_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
-
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int currentSlide = 0;
-  Timer? _timer;
-
-  final List<Map<String, String>> slides = [
-    {
-      "title": "SUA CENTRAL DE CHAMADOS",
-      "highlight": "RÁPIDA",
-      "image": "assets/phone.png",
-    },
-    {
-      "title": "ORGANIZAÇÃO EM QUALQUER LUGAR",
-      "highlight": "INTELIGENTE",
-      "image": "assets/comp.png",
-    },
-  ];
+  // Estados do backend
+  String userName = "";
+  int totalChamados = 0;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
-      setState(() {
-        currentSlide = (currentSlide + 1) % slides.length;
-      });
-    });
+    _loadDashboardData();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  // ==========================================================
+  //                🔥 BUSCA DADOS DO BACKEND
+  // ==========================================================
+  Future<void> _loadDashboardData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("auth_token");
+
+    if (token == null) return;
+
+    try {
+      // USER
+      final userRes = await http.get(
+        Uri.parse("http://localhost:8001/api/auth/users/me/"),
+        headers: {"Authorization": "Token $token"},
+      );
+
+      if (userRes.statusCode == 200) {
+        final userData = jsonDecode(userRes.body);
+        setState(() {
+          userName = userData["name"] ?? "Técnico";
+        });
+      }
+
+      // TASKS
+      final taskRes = await http.get(
+        Uri.parse("http://localhost:8001/api/task/"),
+        headers: {"Authorization": "Token $token"},
+      );
+
+      if (taskRes.statusCode == 200) {
+        final decoded = jsonDecode(taskRes.body);
+
+        List list =
+            decoded["results"] ??
+            decoded["data"]?["value"]?["results"] ??
+            decoded["data"]?["results"] ??
+            decoded;
+
+        setState(() {
+          totalChamados = list.length;
+        });
+      }
+    } catch (e) {
+      print("Erro ao carregar dashboard: $e");
+    }
   }
 
+  // ==========================================================
+  //                           UI
+  // ==========================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
-      body: SafeArea(
-        child: Row(
-          children: [
-            _buildSidebar(context),
-            Expanded(child: _buildContent(context)),
-          ],
-        ),
+      backgroundColor: Color(0xFFF4F6FA),
+      appBar: AppBar(
+        title: Text("Olá, $userName", style: TextStyle(fontSize: 20)),
+        backgroundColor: Color(0xFF1E293B),
+        centerTitle: true,
       ),
-    );
-  }
 
-  // -----------------------------------
-  // SIDEBAR
-  // -----------------------------------
-  Widget _buildSidebar(BuildContext context) {
-    return Container(
-      width: 220,
-      color: const Color(0xFF071126),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
-            child: Image.asset('assets/logob.png', height: 48),
-          ),
-
-          Expanded(
-            child: ListView(
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(18),
+        child: Column(
+          children: [
+            // ---------------- GRID SUPERIOR ----------------
+            Row(
               children: [
-                _menuItem("Home", Icons.home, true, () {
-                  Navigator.pushReplacement(
-                      context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-                }),
-                _menuItem("Chamados", Icons.list_alt, false, () {
-                  Navigator.pushReplacement(
-                      context, MaterialPageRoute(builder: (_) => const ChamadosScreen()));
-                }),
-                _menuItem("Técnicos", Icons.people, false, () {
-                  Navigator.pushReplacement(
-                      context, MaterialPageRoute(builder: (_) => const TecnicosScreen()));
-                }),
-                _menuItem("Clientes", Icons.apartment, false, () {
-                  Navigator.pushReplacement(
-                      context, MaterialPageRoute(builder: (_) => const ClientesScreen()));
-                }),
-                _menuItem("Monitoramento", Icons.visibility, false, () {
-                  Navigator.pushReplacement(context,
-                      MaterialPageRoute(builder: (_) => const MonitoramentoScreen()));
-                }),
-                _menuItem("Ativos", Icons.devices_other, false, () {
-                  Navigator.pushReplacement(
-                      context, MaterialPageRoute(builder: (_) => const AtivosScreen()));
-                }),
-                _menuItem("Ambientes", Icons.location_city, false, () {
-                  Navigator.pushReplacement(
-                      context, MaterialPageRoute(builder: (_) => const AmbientesScreen()));
-                }),
-                _menuItem("Documentação", Icons.description, false, () {
-                  Navigator.pushReplacement(context,
-                      MaterialPageRoute(builder: (_) => const DocumentacaoScreen()));
-                }),
-              ],
-            ),
-          ),
-
-          // User Card
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0E1A2A),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const CircleAvatar(radius: 20, backgroundColor: Colors.grey),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Alana',
+                  child: Container(
+                    padding: EdgeInsets.all(26),
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 12,
+                            offset: Offset(0, 6))
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Total de Chamados",
+                            style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                                letterSpacing: 0.5)),
+                        SizedBox(height: 6),
+                        Text(
+                          "$totalChamados",
                           style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.w600)),
-                      SizedBox(height: 4),
-                      Text('admin@admin.com',
-                          style: TextStyle(color: Colors.white70, fontSize: 12)),
-                    ],
+                              fontSize: 44,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(
+                                    blurRadius: 14,
+                                    color: Colors.black45,
+                                    offset: Offset(0, 3))
+                              ]),
+                        ),
+                        Text(
+                          "Registrados no sistema",
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
                   ),
-                )
+                ),
+
+                SizedBox(width: 16),
+
+                Expanded(
+                  child: Container(
+                    height: 180,
+                    padding: EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 10,
+                            offset: Offset(0, 4))
+                      ],
+                    ),
+                    child: Center(
+                      child: Image.asset(
+                        "assets/map.png",
+                        opacity: AlwaysStoppedAnimation(.9),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _menuItem(String label, IconData icon, bool selected, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF4B6CFF).withOpacity(0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Icon(icon,
-                color: selected ? const Color(0xFF4B6CFF) : Colors.white70, size: 20),
-            const SizedBox(width: 12),
-            Text(label,
-                style: TextStyle(
-                  color: selected ? const Color(0xFF4B6CFF) : Colors.white70,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                )),
-          ],
-        ),
-      ),
-    );
-  }
+            SizedBox(height: 28),
 
-  // -----------------------------------
-  // CONTEÚDO PRINCIPAL
-  // -----------------------------------
-  Widget _buildContent(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            spacing: 28,
-            runSpacing: 28,
-            children: [
-              _buildChamadosCard(),
-              _buildMapCard(),
-            ],
-          ),
-          const SizedBox(height: 28),
-          _buildBannerCarousel(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChamadosCard() {
-    return Container(
-      width: 740,
-      padding: const EdgeInsets.symmetric(vertical: 44, horizontal: 36),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 28, offset: const Offset(0, 10)),
-        ],
-      ),
-      child: Column(
-        children: const [
-          Text("Total de Chamados", style: TextStyle(color: Colors.white70, fontSize: 16)),
-          SizedBox(height: 14),
-          Text("235", style: TextStyle(color: Colors.white, fontSize: 56, fontWeight: FontWeight.bold)),
-          SizedBox(height: 10),
-          Text("Registrados no sistema", style: TextStyle(color: Colors.white60)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMapCard() {
-    return Container(
-      width: 740,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 20, offset: const Offset(0, 8)),
-        ],
-      ),
-      child: Center(
-        child: Image.asset("assets/map.png", width: 500, fit: BoxFit.contain),
-      ),
-    );
-  }
-
-  // -----------------------------------
-  // BANNER / CARROSSEL
-  // -----------------------------------
-  Widget _buildBannerCarousel() {
-    return Container(
-      height: 340,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 28, offset: const Offset(0, 12)),
-        ],
-      ),
-      child: Stack(
-        children: [
-          ...slides.asMap().entries.map((entry) {
-            int index = entry.key;
-            var slide = entry.value;
-
-            bool active = index == currentSlide;
-
-            return AnimatedOpacity(
-              opacity: active ? 1 : 0,
-              duration: const Duration(milliseconds: 600),
-              child: Transform.translate(
-                offset: Offset(active ? 0 : 60, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 6,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 44),
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: slide["title"]! + "\n",
-                                style: const TextStyle(
-                                    fontSize: 36, fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
-                              TextSpan(
-                                text: slide["highlight"]!,
-                                style: const TextStyle(
-                                    fontSize: 36, fontWeight: FontWeight.bold, color: Color(0xFF4B6CFF)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 40.0),
-                        child: Image.asset(
-                          slide["image"]!,
-                          width: 250,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ],
+            // ----------------------------------------------------
+            //            🔥 IMAGEM FIXA (SEM CARROSSEL)
+            // ----------------------------------------------------
+            Container(
+              height: 300,
+              padding: EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 18,
+                      offset: Offset(0, 6))
+                ],
+              ),
+              child: Center(
+                child: Image.asset(
+                  "assets/telateste1.png",
+                  fit: BoxFit.contain,
+                  height: 240,
                 ),
               ),
-            );
-          }).toList(),
-
-          Positioned(
-            bottom: 18,
-            left: 0,
-            right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(slides.length, (i) {
-                bool active = i == currentSlide;
-                return GestureDetector(
-                  onTap: () => setState(() => currentSlide = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 260),
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    width: active ? 14 : 10,
-                    height: active ? 14 : 10,
-                    decoration: BoxDecoration(
-                      color: active ? Colors.white : Colors.grey[500],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                );
-              }),
             ),
-          )
-        ],
+
+            SizedBox(height: 40),
+
+            // ---------------- MENUS ----------------
+            _menuButton(
+              icon: Icons.assignment,
+              title: "Chamados",
+              page: ChamadosScreen(),
+            ),
+            SizedBox(height: 16),
+
+            _menuButton(
+              icon: Icons.devices,
+              title: "Ativos",
+              page: AtivosListaScreen(),
+            ),
+            SizedBox(height: 16),
+
+            _menuButton(
+              icon: Icons.qr_code_scanner,
+              title: "QR Code",
+              page: QRScanScreen(),
+            ),
+            SizedBox(height: 16),
+
+            _menuButton(
+              icon: Icons.analytics,
+              title: "Monitoramento",
+              page: DashboardMonitoramentoScreen(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------- BOTÃO DE MENU ----------------
+  Widget _menuButton({
+    required IconData icon,
+    required String title,
+    required Widget page,
+  }) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+          context, MaterialPageRoute(builder: (_) => page)),
+      child: Container(
+        padding: EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 14,
+                offset: Offset(0, 6))
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 40, color: Color(0xFF1E293B)),
+            SizedBox(width: 18),
+            Text(title,
+                style:
+                    TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+          ],
+        ),
       ),
     );
   }

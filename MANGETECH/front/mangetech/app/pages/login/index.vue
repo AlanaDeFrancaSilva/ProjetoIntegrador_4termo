@@ -94,13 +94,13 @@ async function login() {
   /* Imagem na lateral esquerda */
   .login-image {
     flex: 1;
-    background-color: #0883ff;  /* Pode colocar a cor de fundo aqui */
-    background-image: url('~/assets/images/fundo.png');  /* Substitua pelo caminho da sua imagem */
+    background-color: #0883ff;
+    background-image: url('~/assets/images/fundo.png');
     background-size: cover;
     background-position: center;
   }
 
-    .login-form-container {
+  .login-form-container {
     flex: 0.45;
     background-color: white;
     padding: 30px;
@@ -116,11 +116,13 @@ async function login() {
       margin-bottom: 20px;
     }
 
-    .login-box, .signup-box {
+    .login-box,
+    .signup-box {
       width: 100%;
       margin-bottom: 20px;
     }
 
+    /* ------------ LOGIN BOX ------------ */
     .login-box {
       background-color: #f9f9f9;
       padding: 20px;
@@ -130,6 +132,7 @@ async function login() {
       h2 {
         font-size: 1.5rem;
         margin-bottom: 10px;
+        color: #0d1224;
       }
 
       p {
@@ -145,12 +148,28 @@ async function login() {
         border: 1px solid #e2e7ef;
         border-radius: 8px;
         font-size: 1rem;
+
+        background-color: #ffffff !important;
+        color: #0d1224 !important;
+      }
+
+      /* Placeholder */
+      input::placeholder {
+        color: #8f8f8f !important;
+      }
+
+      /* Autofill Chrome corrige o fundo cinza */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+        -webkit-text-fill-color: #0d1224 !important;
       }
 
       .btn-login {
         width: 100%;
         padding: 12px;
-        background-color: #000000;
+        background-color: #0d1224;
         color: white;
         border: none;
         border-radius: 8px;
@@ -165,6 +184,7 @@ async function login() {
       }
     }
 
+    /* ------------ SIGNUP BOX ------------ */
     .signup-box {
       text-align: center;
 
@@ -178,7 +198,7 @@ async function login() {
         display: inline-block;
         width: 100%;
         padding: 12px;
-        background-color: #000000;
+        background-color: #0d1224;
         color: white;
         border: none;
         border-radius: 8px;
@@ -187,6 +207,7 @@ async function login() {
         text-decoration: none;
         cursor: pointer;
         transition: background-color 0.3s;
+
         &:hover {
           background-color: #00076d;
         }
@@ -195,6 +216,7 @@ async function login() {
   }
 }
 
+/* ------------ RESPONSIVO ------------ */
 @media (max-width: 768px) {
   .login-container {
     flex-direction: column;
