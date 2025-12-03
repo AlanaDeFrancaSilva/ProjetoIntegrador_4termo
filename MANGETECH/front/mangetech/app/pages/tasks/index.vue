@@ -9,6 +9,10 @@ import { getUrgencyLevels } from '~/services/urgency.services'
 import NewTaskModal from '~/components/NewTaskModal.vue'
 import TaskDetailsModal from '~/components/TaskDetailsModal.vue'
 
+// 🔥 IMPORTANDO O STORE PARA BLOQUEIO POR NÍVEL
+import { useUserStore } from '@/stores/user'
+const userStore = useUserStore()
+
 const tasks = ref<any[]>([])
 const searchQuery = ref('')
 const urgencyFilter = ref('')
@@ -68,7 +72,7 @@ const fetchUrgencyLevels = async () => {
 const getLatestStatus = (task) =>
   task.TaskStatus_task_FK?.at(-1)?.status || 'Sem Status'
 
-// Buscar chamados (sem status filter)
+// Buscar chamados
 const fetchTasks = async () => {
   try {
     isLoading.value = true
@@ -96,7 +100,14 @@ const openTaskDetails = async (task: any) => {
 }
 
 // Criar e atualizar
+
+// 🚫 BLOQUEIO: Técnico não pode criar task
 const handleSave = async (newData: any) => {
+  if (!userStore.isAdmin && !userStore.isCliente) {
+    alert("Você não tem permissão para criar chamados.")
+    return
+  }
+
   await createTask(newData)
   await fetchTasks()
   showNewTaskModal.value = false
@@ -137,9 +148,16 @@ watch(urgencyFilter, fetchTasks)
       </div>
 
       <div class="actions-buttons">
-        <button class="btn-primary" @click="showNewTaskModal = true">+ Novo Chamado</button>
+        
+        <!-- 🚫 TÉCNICO NÃO VÊ O BOTÃO -->
+       <button
+  v-if="userStore.isAdmin || userStore.isCliente"
+  class="btn-primary"
+  @click="showNewTaskModal = true"
+>
+  + Novo Chamado
+</button>
 
-        <!-- ÚNICO FILTRO: URGÊNCIA -->
         <select v-model="urgencyFilter" @change="fetchTasks" class="select-filter">
           <option value="">Todas as Urgências</option>
           <option value="LOW">Baixa</option>

@@ -29,7 +29,7 @@
           </option>
         </select>
 
-        <!-- 🔹 Status (selecionável manualmente) -->
+        <!-- Status -->
         <label>Status</label>
         <select v-model="form.status" required>
           <option disabled value="">Selecione o status</option>
@@ -54,7 +54,7 @@
           </option>
         </select>
 
-        <!-- Data de criação -->
+        <!-- Data -->
         <label>Data de Criação</label>
         <input v-model="form.creation_date" type="text" disabled />
 
@@ -63,7 +63,16 @@
           <button type="button" class="btn-cancel" @click="close">
             Cancelar
           </button>
-          <button type="submit" class="btn-save">Salvar</button>
+
+          <!-- 🔥 BLOQUEIO: técnico NÃO consegue salvar -->
+          <button
+            type="submit"
+            class="btn-save"
+            :disabled="isBlocked"
+            :class="{ 'btn-disabled': isBlocked }"
+          >
+            Salvar
+          </button>
         </div>
 
       </form>
@@ -73,8 +82,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useUserStore } from '@/stores/user'
 
 const emit = defineEmits(['close', 'save'])
+const userStore = useUserStore()
 
 const props = defineProps({
   usersList: { type: Array, default: () => [] },
@@ -82,7 +93,10 @@ const props = defineProps({
   urgencyOptions: { type: Array, default: () => [] },
 })
 
-// 🔹 Status com valores reais do Django
+/* 🔹 BLOQUEIO TOTAL PARA TÉCNICO */
+const isBlocked = computed(() => !userStore.isAdmin && !userStore.isCliente)
+
+// Status
 const statusOptions = [
   { value: 'OPEN', label: 'Aberto' },
   { value: 'WAITING_RESPONSIBLE', label: 'Aguardando Responsável' },
@@ -92,25 +106,25 @@ const statusOptions = [
   { value: 'CANCELLED', label: 'Cancelado' },
 ]
 
-// 🔹 Formulário correto
+// Form
 const form = ref({
   name: '',
   description: '',
   urgency_level: '',
-  status: 'OPEN',   // Agora começa como ABERTO corretamente
+  status: 'OPEN',
   responsibles_FK: [],
   equipments_FK: [],
   creation_date: new Date().toLocaleDateString(),
 })
 
-// 🔹 Se atribuir usuários, mudar automaticamente para ONGOING
-watch(() => form.value.responsibles_FK, (newValue) => {
-  if (newValue && newValue.length > 0 && form.value.status === 'OPEN') {
+// Atribuiu responsáveis → muda status
+watch(() => form.value.responsibles_FK, (newVal) => {
+  if (newVal.length > 0 && form.value.status === 'OPEN') {
     form.value.status = 'ONGOING'
   }
 })
 
-// 🔹 Converter urgência técnica para label amigável
+// Formata urgência
 const formattedUrgencyOptions = computed(() => {
   const labelMap: Record<string, string> = {
     LOW: 'Baixa',
@@ -128,13 +142,18 @@ const formattedUrgencyOptions = computed(() => {
 const close = () => emit('close')
 
 const submitForm = () => {
+  // 🚫 SEGURANÇA MÁXIMA: TÉCNICO NUNCA ENVIA
+  if (isBlocked.value) {
+    alert("Você não tem permissão para criar chamados.")
+    return
+  }
+
   emit('save', form.value)
   close()
 }
 </script>
 
 <style scoped lang="scss">
-/* 🔹 Seus estilos foram mantidos */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -201,6 +220,12 @@ select {
 .btn-save {
   background: #1e293b;
   color: white;
+}
+
+/* 🔥 Botão bloqueado para técnico */
+.btn-disabled {
+  background: #9ca3af !important;
+  cursor: not-allowed !important;
 }
 
 @keyframes fadeIn {

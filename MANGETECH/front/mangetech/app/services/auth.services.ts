@@ -6,8 +6,6 @@ interface User {
   id: number
   email: string
   name: string
-  //nif: string
-  //phone: string
   groups: string[]
 }
 
@@ -40,7 +38,6 @@ export const getCurrentUser = async (): Promise<User> => {
   })
 }
 
-
 export const updateCurrentUser = async (data: any) => {
   const token = localStorage.getItem('auth_token')
 
@@ -50,4 +47,3 @@ export const updateCurrentUser = async (data: any) => {
     body: data,
   })
 }
-
