@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:cagesystems/services/token_storage.dart';
 
 class AtivosService {
-  static const String base = "http://localhost:8001/api/equipment/";
+  // TROQUE localhost → IP da sua máquina
+  static const String base = "http://10.109.71.29:8001/api/equipment/";
 
   /// Normaliza retorno exatamente como seu norm()
   static dynamic normalize(dynamic data) {
@@ -60,11 +61,13 @@ class AtivosService {
   /// ============================================================
   /// 🔹 GET /environment — Ambientes
   /// ============================================================
+  static const String envBase = "http://10.109.71.29:8001/api/environment/";
+
   static Future<List<dynamic>> getAmbientes() async {
     final token = await TokenStorage.getToken();
 
     final response = await http.get(
-      Uri.parse("http://localhost:8001/api/environment/"),
+      Uri.parse(envBase),
       headers: {"Authorization": "Bearer $token"},
     );
 
@@ -75,11 +78,13 @@ class AtivosService {
   /// ============================================================
   /// 🔹 GET /category — Categorias
   /// ============================================================
+  static const String catBase = "http://10.109.71.29:8001/api/category/";
+
   static Future<List<dynamic>> getCategorias() async {
     final token = await TokenStorage.getToken();
 
     final response = await http.get(
-      Uri.parse("http://localhost:8001/api/category/"),
+      Uri.parse(catBase),
       headers: {"Authorization": "Bearer $token"},
     );
 

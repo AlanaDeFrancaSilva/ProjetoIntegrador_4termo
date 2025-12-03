@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UsersService {
-  static const String base = "http://localhost:8001/api/auth/users/";
+  // CORRIGINDO localhost → IP do computador
+  static const String base = "http://10.109.71.29:8001/api/auth/users/";
 
   /// -------------------------------------------------------------------
   /// Obtém o token salvo (ou retorna null se não existir)
@@ -57,10 +58,7 @@ class UsersService {
 
     final body = jsonDecode(response.body);
 
-    // Seu backend Djoser retorna uma LISTA DIRETA: [ {}, {}, ... ]
     if (body is List) return body;
-
-    // Caso um dia você paginar no futuro:
     return body["results"] ?? [];
   }
 }
