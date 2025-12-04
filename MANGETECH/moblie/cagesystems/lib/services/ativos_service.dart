@@ -4,7 +4,7 @@ import 'package:cagesystems/services/token_storage.dart';
 
 class AtivosService {
   // TROQUE localhost → IP da sua máquina
-  static const String base = "http://10.109.71.29:8001/api/equipment/";
+  static const String base = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/equipment/";
 
   /// Normaliza retorno exatamente como seu norm()
   static dynamic normalize(dynamic data) {
@@ -61,7 +61,7 @@ class AtivosService {
   /// ============================================================
   /// 🔹 GET /environment — Ambientes
   /// ============================================================
-  static const String envBase = "http://10.109.71.29:8001/api/environment/";
+  static const String envBase = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/environment/";
 
   static Future<List<dynamic>> getAmbientes() async {
     final token = await TokenStorage.getToken();
@@ -78,7 +78,7 @@ class AtivosService {
   /// ============================================================
   /// 🔹 GET /category — Categorias
   /// ============================================================
-  static const String catBase = "http://10.109.71.29:8001/api/category/";
+  static const String catBase = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/category/";
 
   static Future<List<dynamic>> getCategorias() async {
     final token = await TokenStorage.getToken();

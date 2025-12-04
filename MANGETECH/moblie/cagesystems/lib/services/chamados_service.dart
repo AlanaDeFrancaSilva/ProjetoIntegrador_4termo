@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:cagesystems/services/token_storage.dart';
 
 class ChamadosService {
-  static const String baseUrl = "http://10.109.71.29:8001/api/auth/users/";
+  static const String baseUrl = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/task/";
   /// ============================================================
   /// 🔹 GET /task/?filtros - lista os chamados
   /// ============================================================

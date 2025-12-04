@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class UsersService {
   // CORRIGINDO localhost → IP do computador
-  static const String base = "http://10.109.71.29:8001/api/auth/users/";
+static const String base = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/";
 
   /// -------------------------------------------------------------------
   /// Obtém o token salvo (ou retorna null se não existir)
