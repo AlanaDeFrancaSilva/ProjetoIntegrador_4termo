@@ -2,7 +2,7 @@
 definePageMeta({ layout: 'dashboard-layout' })
 
 import { ref, watch, onMounted } from 'vue'
-import { getEquipments, createEquipment, updateEquipment } from '~/services/equipment.services'
+import { getEquipments, createEquipment, updateEquipment, deleteEquipment } from '~/services/equipment.services'
 import { getCategories } from '~/services/category.services'
 import { getEnvironments } from '~/services/environment.services'
 
@@ -20,75 +20,31 @@ const selectedEquipment = ref<any | null>(null)
 const categoriesList = ref<any[]>([])
 const environmentsList = ref<any[]>([])
 
-/* ===========================================================
-    FETCH UNIVERSAL — FUNCIONA COM QUALQUER FORMATO DA API
-=========================================================== */
 const normalizeApiReturn = (data: any) => {
-  return (
-    data?.data?.value?.results ||
-    data?.data?.results ||
-    data?.results ||
-    (Array.isArray(data) ? data : []) ||
-    []
-  )
-}
+  if (!data) return [];
+  const d = data.data ?? data;
+  return d.results || (Array.isArray(d) ? d : []) || [];
+};
 
-/* ===========================================================
-                BUSCAR CATEGORIAS
-=========================================================== */
 const fetchCategories = async () => {
-  try {
-    const data = await getCategories()
-    console.log("📦 Categorias recebidas:", data)
-
-    categoriesList.value = normalizeApiReturn(data)
-  } catch (e) {
-    console.error("❌ Erro ao buscar categorias:", e)
-  }
+  const data = await getCategories()
+  categoriesList.value = normalizeApiReturn(data)
 }
 
-/* ===========================================================
-                BUSCAR AMBIENTES
-=========================================================== */
 const fetchEnvironments = async () => {
-  try {
-    const data = await getEnvironments()
-    console.log("📦 Ambientes recebidos:", data)
-
-    environmentsList.value = normalizeApiReturn(data)
-  } catch (e) {
-    console.error("❌ Erro ao buscar ambientes:", e)
-  }
+  const data = await getEnvironments()
+  environmentsList.value = normalizeApiReturn(data)
 }
 
-/* ===========================================================
-                BUSCAR EQUIPAMENTOS
-=========================================================== */
 const fetchEquipmentsData = async () => {
-  try {
-    isLoading.value = true
-    const params: Record<string, any> = {}
-
-    if (searchQuery.value) params.name = searchQuery.value
-
-    const data = await getEquipments(params)
-
-    equipments.value =
-      data?.data?.value?.results ||
-      data?.data?.results ||
-      data?.results ||
-      data ||
-      []
-  } catch (err) {
-    console.error("Erro ao buscar equipamentos:", err)
-  } finally {
-    isLoading.value = false
-  }
+  isLoading.value = true
+  const params: Record<string, any> = {}
+  if (searchQuery.value) params.name = searchQuery.value
+  const data = await getEquipments(params)
+  equipments.value = normalizeApiReturn(data)
+  isLoading.value = false
 }
 
-/* ===========================================================
-                ABRIR MODAL DE DETALHES
-=========================================================== */
 const openEquipmentDetails = async (equipment: any) => {
   await fetchCategories()
   await fetchEnvironments()
@@ -96,18 +52,12 @@ const openEquipmentDetails = async (equipment: any) => {
   showEquipmentDetailsModal.value = true
 }
 
-/* ===========================================================
-                SALVAR NOVO EQUIPAMENTO
-=========================================================== */
 const handleSave = async (newData: any) => {
   await createEquipment(newData)
   await fetchEquipmentsData()
   showNewEquipmentModal.value = false
 }
 
-/* ===========================================================
-                ATUALIZAR EQUIPAMENTO
-=========================================================== */
 const handleUpdate = async (updatedData: any) => {
   await updateEquipment(updatedData.id, updatedData)
   await fetchEquipmentsData()
@@ -115,8 +65,15 @@ const handleUpdate = async (updatedData: any) => {
 }
 
 /* ===========================================================
-                WATCHERS
+                EXCLUIR EQUIPAMENTO
 =========================================================== */
+const handleDelete = async (id: number) => {
+  if (!confirm("Tem certeza que deseja excluir este ativo?")) return
+  await deleteEquipment(id)
+  await fetchEquipmentsData()
+  showEquipmentDetailsModal.value = false
+}
+
 watch(showNewEquipmentModal, async (isOpen) => {
   if (isOpen) {
     await fetchCategories()
@@ -127,10 +84,6 @@ watch(showNewEquipmentModal, async (isOpen) => {
 onMounted(fetchEquipmentsData)
 watch(searchQuery, fetchEquipmentsData)
 </script>
-
-
-
-
 
 <template>
   <div class="page-container">
@@ -199,6 +152,7 @@ watch(searchQuery, fetchEquipmentsData)
       :environmentsList="environmentsList"
       @close="showEquipmentDetailsModal = false"
       @update="handleUpdate"
+      @delete="handleDelete"
     />
 
     <div v-else class="loading">

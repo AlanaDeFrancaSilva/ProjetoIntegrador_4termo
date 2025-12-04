@@ -1,14 +1,15 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-
-from ..models import Task
-from ..serializers import TaskReadSerializer, TaskWriteSerializer
-from ..filters import TaskFilter
+from django.db.models import Q
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from ..models import URGENCY_LEVELS
+
+from ..models import Task, URGENCY_LEVELS
+from ..serializers import TaskReadSerializer, TaskWriteSerializer
+from ..filters import TaskFilter
+
 
 class UrgencyLevelList(APIView):
     def get(self, request):
@@ -18,11 +19,9 @@ class UrgencyLevelList(APIView):
         ])
 
 
-
 class TaskView(ModelViewSet):
     queryset = Task.objects.all()
     permission_classes = [IsAuthenticated]
-
     filter_backends = [DjangoFilterBackend]
     filterset_class = TaskFilter
 
@@ -37,19 +36,15 @@ class TaskView(ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        if not user.is_authenticated:
-            return Task.objects.none()
-
-        # ADMIN vê tudo
-        if user.groups.filter(name='ADMIN').exists():
+        if user.groups.filter(name="ADMIN").exists():
             return Task.objects.all()
 
-        # Técnico → tasks onde é responsável
-        if user.groups.filter(name='Técnico').exists():
-            return Task.objects.filter(responsibles_FK=user.id)
+        if user.groups.filter(name="Técnico").exists():
+            # Técnico vê apenas os atribuídos a ele
+            return Task.objects.filter(responsibles_FK=user.id).distinct()
 
-        # Cliente → tasks criadas por ele
-        if user.groups.filter(name='Cliente').exists():
+        if user.groups.filter(name="Cliente").exists():
+            # Cliente vê somente o que ele criou
             return Task.objects.filter(creator_FK=user.id)
 
         return Task.objects.none()

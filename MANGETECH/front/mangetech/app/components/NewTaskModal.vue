@@ -32,16 +32,19 @@
         <!-- Status -->
         <label>Status</label>
         <select v-model="form.status" required>
-          <option disabled value="">Selecione o status</option>
           <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>
         </select>
 
-        <!-- Responsáveis -->
+        <!-- Responsáveis (somente técnicos!) -->
         <label>Responsáveis</label>
         <select v-model="form.responsibles_FK" multiple>
-          <option v-for="user in props.usersList" :key="user.id" :value="user.id">
+          <option
+            v-for="user in technicianUsers"
+            :key="user.id"
+            :value="user.id"
+          >
             {{ user.name }}
           </option>
         </select>
@@ -64,7 +67,6 @@
             Cancelar
           </button>
 
-          <!-- 🔥 BLOQUEIO: técnico NÃO consegue salvar -->
           <button
             type="submit"
             class="btn-save"
@@ -93,20 +95,27 @@ const props = defineProps({
   urgencyOptions: { type: Array, default: () => [] },
 })
 
-/* 🔹 BLOQUEIO TOTAL PARA TÉCNICO */
+/* 🔥 SOMENTE TÉCNICOS NO SELECT */
+const technicianUsers = computed(() =>
+  props.usersList.filter((u: any) =>
+    Array.isArray(u.groups) && u.groups.includes("Técnico")
+  )
+)
+
+/* 🔒 BLOQUEIO TOTAL PARA TÉCNICO */
 const isBlocked = computed(() => !userStore.isAdmin && !userStore.isCliente)
 
-// Status
+/* Status */
 const statusOptions = [
-  { value: 'OPEN', label: 'Aberto' },
-  { value: 'WAITING_RESPONSIBLE', label: 'Aguardando Responsável' },
-  { value: 'ONGOING', label: 'Em Andamento' },
-  { value: 'DONE', label: 'Concluído' },
-  { value: 'FINISHED', label: 'Finalizado' },
-  { value: 'CANCELLED', label: 'Cancelado' },
+  { value: 'OPEN', label: '🟢 Aberto' },
+  { value: 'WAITING_RESPONSIBLE', label: '🟡 Aguardando Responsável' },
+  { value: 'ONGOING', label: '🔵 Em Andamento' },
+  { value: 'DONE', label: '🟣 Concluído' },
+  { value: 'FINISHED', label: '⚪ Finalizado' },
+  { value: 'CANCELLED', label: '🔴 Cancelado' },
 ]
 
-// Form
+/* Formulário */
 const form = ref({
   name: '',
   description: '',
@@ -117,14 +126,14 @@ const form = ref({
   creation_date: new Date().toLocaleDateString(),
 })
 
-// Atribuiu responsáveis → muda status
+/* Se selecionar técnico → status muda automaticamente */
 watch(() => form.value.responsibles_FK, (newVal) => {
   if (newVal.length > 0 && form.value.status === 'OPEN') {
     form.value.status = 'ONGOING'
   }
 })
 
-// Formata urgência
+/* Urgência formatada */
 const formattedUrgencyOptions = computed(() => {
   const labelMap: Record<string, string> = {
     LOW: 'Baixa',
@@ -132,7 +141,6 @@ const formattedUrgencyOptions = computed(() => {
     HIGH: 'Alta',
     EXTRA_HIGH: 'Extra Alta',
   }
-
   return props.urgencyOptions.map((item: any) => ({
     value: item.value,
     label: labelMap[item.value] || item.label,
@@ -142,12 +150,10 @@ const formattedUrgencyOptions = computed(() => {
 const close = () => emit('close')
 
 const submitForm = () => {
-  // 🚫 SEGURANÇA MÁXIMA: TÉCNICO NUNCA ENVIA
   if (isBlocked.value) {
     alert("Você não tem permissão para criar chamados.")
     return
   }
-
   emit('save', form.value)
   close()
 }
@@ -170,51 +176,29 @@ const submitForm = () => {
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  animation: fadeIn 0.3s ease;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
 }
 
 .modal-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-input,
-textarea,
-select {
-  width: 100%;
+select, input, textarea {
   padding: 10px;
-  border: 1px solid #1e293b;
   border-radius: 6px;
-  font-size: 14px;
+  border: 1px solid #1e293b;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 5px;
-}
-
-.btn-cancel,
-.btn-save {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-cancel {
-  background: #e5e7eb;
-  color: #374151;
 }
 
 .btn-save {
@@ -222,20 +206,8 @@ select {
   color: white;
 }
 
-/* 🔥 Botão bloqueado para técnico */
 .btn-disabled {
-  background: #9ca3af !important;
-  cursor: not-allowed !important;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  background: #9ca3af;
+  cursor: not-allowed;
 }
 </style>

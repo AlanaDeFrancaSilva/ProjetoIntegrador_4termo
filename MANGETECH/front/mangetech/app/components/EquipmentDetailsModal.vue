@@ -15,7 +15,7 @@
         <input v-model="form.code" type="text" required />
 
         <label>Categoria</label>
-        <select v-model="form.category_FK" required>
+        <select v-model="form.category_FK_id" required>
           <option disabled value="">Selecione...</option>
           <option v-for="c in props.categoriesList" :key="c.id" :value="c.id">
             {{ c.name }}
@@ -23,7 +23,7 @@
         </select>
 
         <label>Ambiente</label>
-        <select v-model="form.environment_FK" required>
+        <select v-model="form.environment_FK_id" required>
           <option disabled value="">Selecione...</option>
           <option v-for="env in props.environmentsList" :key="env.id" :value="env.id">
             {{ env.name }}
@@ -33,10 +33,14 @@
         <label>Descrição</label>
         <textarea v-model="form.description" rows="3" required></textarea>
 
-        <p><strong>Data de Criação: </strong>{{ new Date(form.creation_date).toLocaleString() }}</p>
+        <p>
+          <strong>Data de Criação: </strong>
+          {{ new Date(form.creation_date).toLocaleString() }}
+        </p>
 
         <div class="modal-footer">
           <button type="button" class="btn-cancel" @click="close">Fechar</button>
+          <button type="button" class="btn-delete" @click="deleteItem">Excluir</button>
           <button type="submit" class="btn-save">Salvar Alterações</button>
         </div>
 
@@ -48,7 +52,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 
-const emit = defineEmits(['close', 'update'])
+const emit = defineEmits(['close', 'update', 'delete'])
 
 const props = defineProps({
   equipment: { type: Object, required: true },
@@ -57,20 +61,21 @@ const props = defineProps({
 })
 
 /* ======================================================
-   FORM NORMALIZADO — IDs sempre corretos
+   FORM CORRETO — usando category_FK_id e environment_FK_id
 ====================================================== */
 const form = ref({
   ...props.equipment,
-  category_FK: props.equipment.category_FK?.id || "",
-  environment_FK: props.equipment.environment_FK?.id || "",
+  category_FK_id: props.equipment.category_FK?.id || "",
+  environment_FK_id: props.equipment.environment_FK?.id || "",
   description: props.equipment.description || ""
 })
 
+/* Atualiza quando abrir outro ativo */
 watch(() => props.equipment, (eq) => {
   form.value = {
     ...eq,
-    category_FK: eq.category_FK?.id || "",
-    environment_FK: eq.environment_FK?.id || "",
+    category_FK_id: eq.category_FK?.id || "",
+    environment_FK_id: eq.environment_FK?.id || "",
     description: eq.description || ""
   }
 })
@@ -78,7 +83,16 @@ watch(() => props.equipment, (eq) => {
 const close = () => emit("close")
 
 /* ======================================================
-   ENVIO FINAL — tudo pronto para o backend aceitar
+   BOTÃO EXCLUIR — dispara evento para o componente pai
+====================================================== */
+const deleteItem = () => {
+  if (confirm("Tem certeza que deseja excluir este ativo?")) {
+    emit("delete", form.value.id)
+  }
+}
+
+/* ======================================================
+   BOTÃO SALVAR — envia os dados corretos para o backend
 ====================================================== */
 const submitForm = () => {
   emit("update", {
@@ -86,11 +100,12 @@ const submitForm = () => {
     name: form.value.name,
     code: form.value.code,
     description: form.value.description,
-    category_FK: form.value.category_FK,
-    environment_FK: form.value.environment_FK
+    category_FK_id: Number(form.value.category_FK_id),
+    environment_FK_id: Number(form.value.environment_FK_id)
   })
 }
 </script>
+
 
 <style scoped lang="scss">
 .modal-overlay {
@@ -130,6 +145,13 @@ input, textarea, select {
 
 .btn-save {
   background: #1e293b;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+}
+
+.btn-delete {
+  background: #dc2626;
   color: white;
   padding: 8px 14px;
   border-radius: 6px;

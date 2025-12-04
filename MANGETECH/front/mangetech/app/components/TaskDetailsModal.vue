@@ -7,7 +7,7 @@
         <button class="close-btn" @click="close">✕</button>
       </div>
 
-      <!-- 🔹 Navigation Tabs -->
+      <!-- Tabs -->
       <div class="tabs">
         <button 
           v-for="tab in tabs"
@@ -21,13 +21,13 @@
 
       <form @submit.prevent="submitForm" class="modal-body">
 
-        <!-- 🟦 TAB 1: INFORMAÇÕES -->
+        <!-- INFORMAÇÕES -->
         <div v-if="activeTab === 'Informações'">
           <label>Título</label>
-          <input v-model="form.name" type="text" placeholder="Digite o título" />
+          <input v-model="form.name" type="text"/>
 
           <label>Descrição</label>
-          <textarea v-model="form.description" rows="3" placeholder="Descreva o chamado"></textarea>
+          <textarea v-model="form.description" rows="3"></textarea>
 
           <label>Urgência</label>
           <select v-model="form.urgency_level">
@@ -36,34 +36,55 @@
             </option>
           </select>
 
+          <label>Status</label>
+          <select v-model="form.status">
+            <option v-for="st in statusOptions" :key="st.value" :value="st.value">
+              {{ st.label }}
+            </option>
+          </select>
+
           <label>Data de Abertura</label>
           <input type="text" :value="formattedDate" disabled />
         </div>
 
-        <!-- 🟨 TAB 2: RESPONSÁVEIS -->
+        <!-- RESPONSÁVEIS -->
         <div v-if="activeTab === 'Responsáveis'">
           <label>Responsáveis</label>
+          
           <select v-model="form.responsibles_FK" multiple>
-            <option v-for="user in usersList" :key="user.id" :value="user.id">
+            <option 
+              v-for="user in technicianUsers" 
+              :key="user.id" 
+              :value="user.id"
+            >
               {{ user.name }}
             </option>
           </select>
+
+          <div class="selected-list" v-if="form.responsibles_FK.length">
+            <p><strong>Selecionados:</strong></p>
+            <ul>
+              <li v-for="id in form.responsibles_FK" :key="id">
+                {{ getUserName(id) }}
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <!-- 🟩 TAB 3: ANDAMENTO -->
+        <!-- ANDAMENTO -->
         <div v-if="activeTab === 'Andamento'">
-          <label>Anexo (Imagem/Documento)</label>
-          <input type="file" @change="handleFileUpload" />
+          <label>Anexo</label>
+          <input type="file" @change="handleFileUpload"/>
 
           <div v-if="attachedFileName" class="file-preview">
             📎 {{ attachedFileName }}
           </div>
 
           <label>Observações</label>
-          <textarea v-model="form.progress_notes" placeholder="Descreva o andamento..." rows="4"></textarea>
+          <textarea v-model="form.progress_notes" rows="4"></textarea>
         </div>
 
-        <!-- ⚙️ Footer de ações -->
+        <!-- FOOTER -->
         <div class="modal-footer">
           <button type="button" class="btn-delete" @click="deleteTask">Excluir</button>
           <button type="button" class="btn-cancel" @click="close">Cancelar</button>
@@ -75,58 +96,78 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { updateTask, deleteTaskById } from '~/services/task.services'
 
-const emit = defineEmits(['close', 'update'])
+<script setup>
+import { ref, watch, computed } from "vue";
+import { deleteTaskById } from "~/services/task.services";
+
+const emit = defineEmits(["close", "update"]);
+
 const props = defineProps({
   task: { type: Object, required: true },
-  urgencyOptions: { type: Array, default: () => [] },
-  usersList: { type: Array, default: () => [] },
-})
+  urgencyOptions: Array,
+  usersList: Array
+});
 
-const form = ref({ ...props.task })
-const activeTab = ref('Informações')
-const tabs = ['Informações', 'Responsáveis', 'Andamento']
+const normalizeForm = (task) => ({
+  ...task,
+  responsibles_FK: task.responsibles_FK?.map(r => r.id) || [],
+  progress_notes: task.progress_notes || ""
+});
 
-const attachedFile = ref<File | null>(null)
-const attachedFileName = ref<string | null>(null)
+const form = ref(normalizeForm(props.task));
 
-const handleFileUpload = (event: any) => {
-  attachedFile.value = event.target.files[0]
-  attachedFileName.value = attachedFile.value?.name || null
-}
+watch(() => props.task, (nt) => {
+  form.value = normalizeForm(nt);
+});
+
+// 🔥 Filtrar apenas técnicos
+const technicianUsers = computed(() =>
+  props.usersList?.filter(u => u.groups?.includes("Técnico")) || []
+);
+
+const getUserName = (id) =>
+  props.usersList.find((u) => u.id === id)?.name || "Desconhecido";
+
+const activeTab = ref("Informações");
+const tabs = ["Informações", "Responsáveis", "Andamento"];
 
 const formattedDate = computed(() =>
-  new Date(form.value.creation_date).toLocaleDateString('pt-BR')
-)
+  new Date(form.value.creation_date).toLocaleDateString("pt-BR")
+);
 
-const formattedUrgencyOptions = computed(() => {
-  const labelMap: Record<string, string> = {
-    LOW: '🟢 Baixa',
-    MEDIUM: '🟡 Média',
-    HIGH: '🟠 Alta',
-    EXTRA_HIGH: '🔴 Extra Alta',
-  }
-  return props.urgencyOptions.map((item: any) => ({
-    value: item.value,
-    label: labelMap[item.value] || item.label
+const formattedUrgencyOptions = computed(() =>
+  props.urgencyOptions.map(u => ({
+    value: u.value,
+    label: u.label
   }))
-})
+);
 
-const close = () => emit('close')
+const statusOptions = [
+  { value: "OPEN", label: "Aberto" },
+  { value: "WAITING_RESPONSIBLE", label: "Aguardando Responsável" },
+  { value: "ONGOING", label: "Em Andamento" },
+  { value: "DONE", label: "Concluído" },
+  { value: "FINISHED", label: "Finalizado" },
+  { value: "CANCELLED", label: "Cancelado" }
+];
 
-const submitForm = async () => {
-  emit('update', form.value) // retorno para index.vue
-}
+const attachedFileName = ref(null);
+const handleFileUpload = (e) => {
+  const file = e.target.files[0];
+  attachedFileName.value = file?.name || null;
+};
+
+const submitForm = () => emit("update", form.value);
 
 const deleteTask = () => {
-  if (confirm('Tem certeza que deseja excluir este chamado?')) {
-    deleteTaskById(form.value.id)
-    emit('close')
+  if (confirm("Tem certeza que deseja excluir?")) {
+    deleteTaskById(form.value.id);
+    emit("close");
   }
-}
+};
+
+const close = () => emit("close");
 </script>
 
 <style scoped>
@@ -153,7 +194,6 @@ const deleteTask = () => {
   margin-bottom: 15px;
 }
 
-/* ⚫ Tabs */
 .tabs {
   display: flex;
   gap: 8px;
@@ -173,7 +213,6 @@ const deleteTask = () => {
   color: white;
 }
 
-/* 📝 Inputs estilizados */
 input,
 textarea,
 select {
@@ -181,21 +220,9 @@ select {
   padding: 10px 14px;
   border: 1px solid #cfd8e3;
   border-radius: 10px;
-  font-size: 14px;
   background: #f9fafb;
-  transition: all 0.25s ease-in-out;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: #1e293b;
-  background: white;
-  box-shadow: 0 0 6px rgba(30, 41, 59, 0.45);
-}
-
-/* 🎨 Footer e botões */
 .modal-footer {
   display: flex;
   justify-content: space-between;
@@ -211,8 +238,8 @@ select:focus {
 
 .btn-cancel {
   padding: 8px 14px;
-  border: 1px solid #ddd;
   border-radius: 6px;
+  background: #ddd;
 }
 
 .btn-save {
@@ -222,12 +249,10 @@ select:focus {
   border-radius: 6px;
 }
 
-/* 📎 Pré-visualização do arquivo */
 .file-preview {
   margin-top: 8px;
   padding: 8px;
-  background-color: #f3f4f6;
+  background: #f3f4f6;
   border-radius: 6px;
-  font-size: 14px;
 }
 </style>

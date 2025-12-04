@@ -15,7 +15,7 @@
         <input v-model="form.code" type="text" required />
 
         <label>Categoria</label>
-        <select v-model="form.category_FK" required>
+        <select v-model="form.category_FK_id" required>
           <option disabled value="">Selecione uma categoria</option>
           <option v-for="c in props.categoriesList" :key="c.id" :value="c.id">
             {{ c.name }}
@@ -23,7 +23,7 @@
         </select>
 
         <label>Ambiente</label>
-        <select v-model="form.environment_FK" required>
+        <select v-model="form.environment_FK_id" required>
           <option disabled value="">Selecione um ambiente</option>
           <option v-for="env in props.environmentsList" :key="env.id" :value="env.id">
             {{ env.name }}
@@ -56,8 +56,8 @@ const form = ref({
   name: '',
   code: '',
   description: '',
-  category_FK: '',
-  environment_FK: ''
+  category_FK_id: '',
+  environment_FK_id: ''
 })
 
 const close = () => emit('close')
@@ -65,13 +65,12 @@ const close = () => emit('close')
 const submitForm = () => {
   emit('save', {
     ...form.value,
-    category_FK: { id: form.value.category_FK },
-    environment_FK: { id: form.value.environment_FK },
+    category_FK_id: Number(form.value.category_FK_id),
+    environment_FK_id: Number(form.value.environment_FK_id),
   })
   close()
 }
 </script>
-
 
 <style scoped lang="scss">
 .modal-overlay {

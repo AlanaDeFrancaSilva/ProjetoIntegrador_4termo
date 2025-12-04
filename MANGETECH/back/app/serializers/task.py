@@ -35,7 +35,7 @@ class TaskWriteSerializer(serializers.ModelSerializer):
         return task
 
     def update(self, instance, validated_data):
-        # ❗Bloqueia status dentro de update de Task
+        
         validated_data.pop('status', None)
         return super().update(instance, validated_data)
 

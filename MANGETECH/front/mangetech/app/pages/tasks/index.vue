@@ -9,7 +9,7 @@ import { getUrgencyLevels } from '~/services/urgency.services'
 import NewTaskModal from '~/components/NewTaskModal.vue'
 import TaskDetailsModal from '~/components/TaskDetailsModal.vue'
 
-// 🔥 IMPORTANDO O STORE PARA BLOQUEIO POR NÍVEL
+// 🔥 Store de usuário
 import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 
@@ -26,7 +26,9 @@ const urgencyOptions = ref<any[]>([])
 const selectedTask = ref<any | null>(null)
 const showTaskDetailsModal = ref(false)
 
-// Mapas
+// =========================
+// FORMATADORES
+// =========================
 const formatStatus = (status: string) => {
   const map: Record<string, string> = {
     OPEN: 'Aberto',
@@ -49,12 +51,30 @@ const formatUrgency = (level: string) => {
   return map[level] || level
 }
 
-// Buscar auxiliares
+// =========================
+// FETCH USERS (TÉCNICOS)
+// =========================
 const fetchUsers = async () => {
-  const data = await getUsers()
-  usersList.value = data.results || data || []
+  try {
+    const data = await getUsers({ role: "tecnico" });
+
+    if (data?.results) {
+      usersList.value = data.results;
+    } else if (Array.isArray(data)) {
+      usersList.value = data;
+    } else {
+      console.error("Resposta inesperada:", data);
+      usersList.value = [];
+    }
+  } catch (err) {
+    console.error("Erro ao buscar usuários:", err);
+    usersList.value = [];
+  }
 }
 
+// =========================
+// FETCH EQUIPAMENTOS / URGÊNCIA
+// =========================
 const fetchEquipments = async () => {
   equipmentList.value = await getEquipments()
 }
@@ -68,11 +88,16 @@ const fetchUrgencyLevels = async () => {
   }))
 }
 
-// Último status
-const getLatestStatus = (task) =>
+// =========================
+// ÚLTIMO STATUS
+// =========================
+const getLatestStatus = (task: any) =>
   task.TaskStatus_task_FK?.at(-1)?.status || 'Sem Status'
 
-// Buscar chamados
+
+// =========================
+// FETCH TASKS (CHAMADOS)
+// =========================
 const fetchTasks = async () => {
   try {
     isLoading.value = true
@@ -82,7 +107,12 @@ const fetchTasks = async () => {
     if (urgencyFilter.value) params.urgency_level = urgencyFilter.value
 
     const { data } = await getTasks(params)
-    tasks.value = data.value?.results || data.results || data || []
+
+    tasks.value =
+      data?.value?.results ||
+      data?.results ||
+      data ||
+      []
   } catch (err) {
     console.error('Erro ao buscar tasks:', err)
   } finally {
@@ -90,7 +120,9 @@ const fetchTasks = async () => {
   }
 }
 
-// Abrir modal de detalhes
+// =========================
+// ABRIR MODAL DETALHES
+// =========================
 const openTaskDetails = async (task: any) => {
   await fetchUrgencyLevels()
   await fetchUsers()
@@ -99,12 +131,12 @@ const openTaskDetails = async (task: any) => {
   showTaskDetailsModal.value = true
 }
 
-// Criar e atualizar
-
-// 🚫 BLOQUEIO: Técnico não pode criar task
+// =========================
+// CRUD → CREATE / UPDATE
+// =========================
 const handleSave = async (newData: any) => {
   if (!userStore.isAdmin && !userStore.isCliente) {
-    alert("Você não tem permissão para criar chamados.")
+    alert('Você não tem permissão para criar chamados.')
     return
   }
 
@@ -119,6 +151,9 @@ const handleUpdate = async (updatedData: any) => {
   showTaskDetailsModal.value = false
 }
 
+// =========================
+// QUANDO ABRE MODAL DE CRIAÇÃO
+// =========================
 watch(showNewTaskModal, async (isOpen) => {
   if (isOpen) {
     await fetchUsers()
@@ -127,7 +162,19 @@ watch(showNewTaskModal, async (isOpen) => {
   }
 })
 
-onMounted(fetchTasks)
+// =========================
+// ON MOUNTED → AQUI ESTÁ A CORREÇÃO!
+// =========================
+onMounted(async () => {
+  await fetchTasks()
+
+  // 🔥 CORREÇÃO: Cliente & Admin carregam técnicos automaticamente
+  if (userStore.isCliente || userStore.isAdmin) {
+    await fetchUsers()
+    await fetchEquipments()
+    await fetchUrgencyLevels()
+  }
+})
 
 watch(searchQuery, fetchTasks)
 watch(urgencyFilter, fetchTasks)
@@ -148,15 +195,13 @@ watch(urgencyFilter, fetchTasks)
       </div>
 
       <div class="actions-buttons">
-        
-        <!-- 🚫 TÉCNICO NÃO VÊ O BOTÃO -->
-       <button
-  v-if="userStore.isAdmin || userStore.isCliente"
-  class="btn-primary"
-  @click="showNewTaskModal = true"
->
-  + Novo Chamado
-</button>
+        <button
+          v-if="userStore.isAdmin || userStore.isCliente"
+          class="btn-primary"
+          @click="showNewTaskModal = true"
+        >
+          + Novo Chamado
+        </button>
 
         <select v-model="urgencyFilter" @change="fetchTasks" class="select-filter">
           <option value="">Todas as Urgências</option>
@@ -223,6 +268,7 @@ watch(urgencyFilter, fetchTasks)
       v-if="showTaskDetailsModal"
       :task="selectedTask"
       :urgencyOptions="urgencyOptions"
+      :usersList="usersList"
       @close="showTaskDetailsModal = false"
       @update="handleUpdate"
     />
@@ -307,7 +353,7 @@ watch(urgencyFilter, fetchTasks)
 
 .btn-primary {
   padding: 8px 16px;
-  background-color:#1e293b;
+  background-color: #1e293b;
   color: white;
   border: none;
   border-radius: 6px;
@@ -333,7 +379,7 @@ watch(urgencyFilter, fetchTasks)
 
 .select-filter:focus {
   outline: none;
-  border-color:#1e293b;
+  border-color: #1e293b;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
 }
 
@@ -341,6 +387,7 @@ select option {
   background-color: #ffffff !important;
   color: #333;
 }
+
 .select-filter:hover,
 .select-filter:focus {
   border-color: #1e293b;
@@ -372,7 +419,7 @@ select option {
   font-size: 14px;
 }
 
-/* 🔵 Badges de urgência (se quiser usar depois) */
+/* 🔵 Badges */
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -380,64 +427,6 @@ select option {
   font-size: 0.85rem;
   display: inline-block;
   text-align: center;
-}
-
-.Baixa { background-color: #d1fae5; color: #065f46; }
-.Média { background-color: #fef3c7; color: #78350f; }
-.Alta { background-color: #fee2e2; color: #991b1b; }
-.ExtraAlta { background-color: #fecaca; color: #7f1d1d; }
-
-/* 🌀 Loading */
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  color: #6b7280;
-}
-
-.page-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* 🎯 Badges de Urgência — estilo dashboard */
-.urgency-badge {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 18px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: capitalize;
-}
-
-/* 🟢 Baixa */
-.urgency-badge.LOW {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-  border: 1px solid #1b5e20;
-}
-
-/* 🟡 Média */
-.urgency-badge.MEDIUM {
-  background-color: #fff9c4;
-  color: #795548;
-  border: 1px solid #795548;
-}
-
-/* 🟠 Alta */
-.urgency-badge.HIGH {
-  background-color: #ffe0b2;
-  color: #e65100;
-  border: 1px solid #e65100;
-}
-
-/* 🔴 Extra Alta */
-.urgency-badge.EXTRA_HIGH {
-  background-color: #ffebee;
-  color: #b71c1c;
-  border: 1px solid #b71c1c;
 }
 
 .clickable-row {
@@ -449,7 +438,8 @@ select option {
   background-color: #f3f4f6;
 }
 
-.status-badge {
+/* Urgência */
+.urgency-badge {
   display: inline-block;
   padding: 6px 14px;
   border-radius: 18px;
@@ -458,6 +448,31 @@ select option {
   text-transform: capitalize;
 }
 
+.urgency-badge.LOW {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #1b5e20;
+}
+
+.urgency-badge.MEDIUM {
+  background-color: #fff9c4;
+  color: #795548;
+  border: 1px solid #795548;
+}
+
+.urgency-badge.HIGH {
+  background-color: #ffe0b2;
+  color: #e65100;
+  border: 1px solid #e65100;
+}
+
+.urgency-badge.EXTRA_HIGH {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #b71c1c;
+}
+
+/* Status cores (se quiser manter) */
 .status-badge.OPEN {
   background-color: #e0f2fe;
   color: #0369a1;
@@ -469,19 +484,18 @@ select option {
   color: #854d0e;
   border: 1px solid #854d0e;
 }
+
 .status-badge.ONGOING {
   background-color: #ffedd5;
   color: #b45309;
   border: 1px solid #b45309;
 }
 
-
 .status-badge.FINISHED {
   background-color: #dbeafe;
   color: #1e40af;
   border: 1px solid #1e40af;
 }
-
 
 .status-badge.CANCELLED {
   background-color: #fee2e2;
@@ -493,5 +507,14 @@ select option {
   background-color: #e8f5e9;
   color: #1b5e20;
   border: 1px solid #1b5e20;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
 }
 </style>

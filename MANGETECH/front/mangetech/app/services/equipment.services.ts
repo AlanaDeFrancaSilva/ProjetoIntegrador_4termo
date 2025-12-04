@@ -30,8 +30,9 @@ export const createEquipment = async (equipmentData: any) => {
   const payload = {
     name: equipmentData.name,
     code: equipmentData.code,
-    category_FK: equipmentData.category_FK,     // ID
-    environment_FK: equipmentData.environment_FK, // ID
+    description: equipmentData.description,
+    category_FK_id: Number(equipmentData.category_FK_id),
+    environment_FK_id: Number(equipmentData.environment_FK_id),
   }
 
   const { data } = await $authFetch(`http://localhost:8001/api/equipment/`, {
@@ -50,8 +51,8 @@ export const updateEquipment = async (id: number | string, data: any) => {
     name: data.name,
     code: data.code,
     description: data.description,
-    category_FK: { id: data.category_FK },
-    environment_FK: { id: data.environment_FK }
+    category_FK_id: Number(data.category_FK_id),
+    environment_FK_id: Number(data.environment_FK_id)
   }
 
   const response = await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
@@ -75,3 +76,15 @@ export const getEnvironments = async () => {
   const { data } = await $authFetch(`http://localhost:8001/api/environment/`)
   return norm(data.value)
 }
+
+/** Excluir equipamento */
+export const deleteEquipment = async (id: number | string) => {
+  const { $authFetch } = useNuxtApp()
+
+  const response = await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
+    method: "DELETE"
+  })
+
+  return response
+}
+
