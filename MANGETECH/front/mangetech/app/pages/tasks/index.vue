@@ -54,23 +54,42 @@ const formatUrgency = (level: string) => {
 // =========================
 // FETCH USERS (TÉCNICOS)
 // =========================
+// =========================
+// FETCH USERS (TÉCNICOS)
+// =========================
 const fetchUsers = async () => {
   try {
+    console.log("🚀 Chamando backend GET /users/?role=tecnico ...");
+
     const data = await getUsers({ role: "tecnico" });
 
+    console.log("🔥 RESPOSTA COMPLETA DO BACKEND (USERS):", data);
+
+    // Trata formatos possíveis
     if (data?.results) {
+      console.log("📌 USANDO data.results:", data.results);
       usersList.value = data.results;
-    } else if (Array.isArray(data)) {
+    } 
+    else if (Array.isArray(data)) {
+      console.log("📌 USANDO array direto:", data);
       usersList.value = data;
-    } else {
-      console.error("Resposta inesperada:", data);
+    } 
+    else if (data?.data?.results) {
+      console.log("📌 USANDO data.data.results:", data.data.results);
+      usersList.value = data.data.results;
+    }
+    else {
+      console.warn("⚠️ FORMATO NÃO RECONHECIDO:", data);
       usersList.value = [];
     }
+
+    console.log("✅ USERS FINAL NO FRONT:", usersList.value);
+
   } catch (err) {
-    console.error("Erro ao buscar usuários:", err);
+    console.error("❌ Erro ao buscar usuários:", err);
     usersList.value = [];
   }
-}
+};
 
 // =========================
 // FETCH EQUIPAMENTOS / URGÊNCIA

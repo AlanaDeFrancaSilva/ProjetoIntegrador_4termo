@@ -1,5 +1,5 @@
 /* ===========================================
-   🟦 GET Usuário Logado ( /auth/users/me/ )
+   🟦 GET Usuário Logado
 =========================================== */
 export const getCurrentUser = async () => {
   if (!process.client) return null;
@@ -15,8 +15,8 @@ export const getCurrentUser = async () => {
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    console.error("❌ Erro ao buscar usuário logado:", err);
+    const error = await response.text();
+    console.error("❌ Erro ao buscar usuário logado:", error);
     throw new Error("Erro ao buscar usuário logado");
   }
 
@@ -26,41 +26,36 @@ export const getCurrentUser = async () => {
 
 
 /* ===========================================
-   🟩 GET LISTA DE USUÁRIOS (COM FILTRO OPCIONAL)
-   Exemplo:
-     getUsers({ role: "tecnico" })
+   🟩 GET LISTA DE USUÁRIOS (CORRETO!)
+   → Usa /api/custom-user/ (sua rota no backend)
+   → Permite ?role=tecnico sem token
 =========================================== */
 export const getUsers = async (params?: Record<string, any>) => {
   if (!process.client) return [];
 
   const token = localStorage.getItem("auth_token");
 
-  console.log("🔑 TOKEN LOCALSTORAGE:", token);
-
-  if (!token) {
-    console.error("❌ Token NÃO encontrado! Requisição não será autenticada.");
-    throw new Error("Token não encontrado");
-  }
-
-  // Monta a query string
   const query = new URLSearchParams(params || {}).toString();
-  const url = `http://localhost:8001/api/auth/users/?${query}`;
 
-  console.log("🌍 GET USERS →", url);
+  // 🔥 ROTA CORRETA!
+  const url = `http://localhost:8001/api/custom-user/?${query}`;
+
+  console.log("📡 GET USERS →", url);
+
+  const headers: any = {
+    "Content-Type": "application/json",
+  };
+
+  // 🔥 APENAS adiciona token se existir
+  // (não quebra /custom-user/?role=tecnico)
+  if (token) headers["Authorization"] = `Token ${token}`;
 
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Token ${token}`,
-    },
+    headers,
   });
 
-  console.log("📡 STATUS GET USERS:", response.status);
-
-  if (response.status === 401) {
-    console.error("❌ FALHA: Backend recusou o token (401 Unauthorized)");
-  }
+  console.log("📡 STATUS USERS:", response.status);
 
   if (!response.ok) {
     const err = await response.text();
@@ -82,7 +77,7 @@ export const createUser = async (payload: any) => {
   const token = localStorage.getItem("auth_token");
   if (!token) throw new Error("Token não encontrado");
 
-  const response = await fetch("http://localhost:8001/api/auth/users/", {
+  const response = await fetch("http://localhost:8001/api/custom-user/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -112,7 +107,7 @@ export const updateUser = async (id: number, payload: any) => {
   if (!token) throw new Error("Token não encontrado");
 
   const response = await fetch(
-    `http://localhost:8001/api/auth/users/${id}/`,
+    `http://localhost:8001/api/custom-user/${id}/`,
     {
       method: "PUT",
       headers: {

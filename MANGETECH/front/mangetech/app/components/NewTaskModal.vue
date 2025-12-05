@@ -37,7 +37,7 @@
           </option>
         </select>
 
-        <!-- Responsáveis (somente técnicos!) -->
+        <!-- Responsáveis (somente técnicos) -->
         <label>Responsáveis</label>
         <select v-model="form.responsibles_FK" multiple>
           <option
@@ -95,14 +95,25 @@ const props = defineProps({
   urgencyOptions: { type: Array, default: () => [] },
 })
 
-/* 🔥 SOMENTE TÉCNICOS NO SELECT */
+/* =====================================================
+   🔥 CORREÇÃO DEFINITIVA DO PROBLEMA:
+   Aceita "tecnico", "Técnico", "TECNICO", etc.
+====================================================== */
 const technicianUsers = computed(() =>
   props.usersList.filter((u: any) =>
-    Array.isArray(u.groups) && u.groups.includes("Técnico")
+    Array.isArray(u.groups) &&
+    u.groups.some(g =>
+      g
+        .normalize("NFD")                // remove acentos
+        .replace(/[\u0300-\u036f]/g, "") // normaliza
+        .trim()
+        .toLowerCase() === "tecnico"     // compara corretamente
+    )
   )
-)
+);
 
-/* 🔒 BLOQUEIO TOTAL PARA TÉCNICO */
+
+/* 🔒 Técnico não pode criar chamados */
 const isBlocked = computed(() => !userStore.isAdmin && !userStore.isCliente)
 
 /* Status */
@@ -126,7 +137,7 @@ const form = ref({
   creation_date: new Date().toLocaleDateString(),
 })
 
-/* Se selecionar técnico → status muda automaticamente */
+/* Se selecionar técnico → muda status automaticamente */
 watch(() => form.value.responsibles_FK, (newVal) => {
   if (newVal.length > 0 && form.value.status === 'OPEN') {
     form.value.status = 'ONGOING'

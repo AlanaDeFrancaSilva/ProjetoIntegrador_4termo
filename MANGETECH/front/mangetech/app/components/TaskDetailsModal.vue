@@ -23,14 +23,15 @@
 
         <!-- INFORMAÇÕES -->
         <div v-if="activeTab === 'Informações'">
+
           <label>Título</label>
-          <input v-model="form.name" type="text"/>
+          <input v-model="form.name" type="text" :disabled="isTecnico"/>
 
           <label>Descrição</label>
-          <textarea v-model="form.description" rows="3"></textarea>
+          <textarea v-model="form.description" rows="3" :disabled="isTecnico"></textarea>
 
           <label>Urgência</label>
-          <select v-model="form.urgency_level">
+          <select v-model="form.urgency_level" :disabled="isTecnico">
             <option v-for="level in formattedUrgencyOptions" :key="level.value" :value="level.value">
               {{ level.label }}
             </option>
@@ -51,7 +52,7 @@
         <div v-if="activeTab === 'Responsáveis'">
           <label>Responsáveis</label>
           
-          <select v-model="form.responsibles_FK" multiple>
+          <select v-model="form.responsibles_FK" multiple :disabled="isTecnico">
             <option 
               v-for="user in technicianUsers" 
               :key="user.id" 
@@ -86,9 +87,19 @@
 
         <!-- FOOTER -->
         <div class="modal-footer">
-          <button type="button" class="btn-delete" @click="deleteTask">Excluir</button>
+
+          <button 
+            v-if="!isTecnico" 
+            type="button" 
+            class="btn-delete" 
+            @click="deleteTask"
+          >
+            Excluir
+          </button>
+
           <button type="button" class="btn-cancel" @click="close">Cancelar</button>
           <button type="submit" class="btn-save">Salvar Alterações</button>
+
         </div>
 
       </form>
@@ -97,17 +108,22 @@
 </template>
 
 
+
 <script setup>
 import { ref, watch, computed } from "vue";
 import { deleteTaskById } from "~/services/task.services";
+import { useUserStore } from "@/stores/user";   // 🔥 IMPORTANTE
 
 const emit = defineEmits(["close", "update"]);
+const userStore = useUserStore();               // 🔥 Agora sabemos o tipo do usuário
 
 const props = defineProps({
   task: { type: Object, required: true },
   urgencyOptions: Array,
   usersList: Array
 });
+
+const isTecnico = computed(() => userStore.isTecnico);
 
 const normalizeForm = (task) => ({
   ...task,
@@ -158,7 +174,26 @@ const handleFileUpload = (e) => {
   attachedFileName.value = file?.name || null;
 };
 
-const submitForm = () => emit("update", form.value);
+/* 🔥🔥 CORREÇÃO PRINCIPAL — Payload diferente para técnico */
+const submitForm = () => {
+  let payload = {
+    id: form.value.id,
+    name: form.value.name,
+    description: form.value.description,
+    suggested_date: form.value.suggested_date,
+    urgency_level: form.value.urgency_level,
+    creation_date: form.value.creation_date,
+    creator_FK: form.value.creator_FK?.id || form.value.creator_FK,
+    equipments_FK: form.value.equipments_FK,
+    responsibles_FK: form.value.responsibles_FK,
+    status: form.value.status,
+    progress_notes: form.value.progress_notes || ""
+  };
+
+  emit("update", payload);
+};
+
+
 
 const deleteTask = () => {
   if (confirm("Tem certeza que deseja excluir?")) {
@@ -169,6 +204,8 @@ const deleteTask = () => {
 
 const close = () => emit("close");
 </script>
+
+
 
 <style scoped>
 .modal-overlay {
