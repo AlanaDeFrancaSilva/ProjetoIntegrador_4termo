@@ -7,20 +7,23 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChamadoDetalhesScreen extends StatefulWidget {
-  final int taskId; // ID do chamado (chamado a partir da lista)
+  final int taskId;
 
-  const ChamadoDetalhesScreen({Key? key, required this.taskId}) : super(key: key);
+  const ChamadoDetalhesScreen({Key? key, required this.taskId})
+      : super(key: key);
 
   @override
   _ChamadoDetalhesScreenState createState() => _ChamadoDetalhesScreenState();
 }
 
 class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
+  static const String baseApi =
+      "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net";
+
   Map<String, dynamic>? task;
   bool loading = true;
   bool submitting = false;
 
-  // Avançar status
   String? selectedStatus;
   final TextEditingController descriptionController = TextEditingController();
   File? pickedImage;
@@ -31,19 +34,14 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
     _fetchTask();
   }
 
-  @override
-  void dispose() {
-    descriptionController.dispose();
-    super.dispose();
-  }
-
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    return prefs.getString("auth_token");
   }
 
   Future<void> _fetchTask() async {
     setState(() => loading = true);
+
     final token = await _getToken();
     if (token == null) {
       _showMessage("Token não encontrado. Faça login novamente.");
@@ -52,16 +50,15 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
     }
 
     try {
+      final url = Uri.parse("$baseApi/api/task/${widget.taskId}/");
+
       final res = await http.get(
-        Uri.parse("http://localhost:8001/api/task/${widget.taskId}/"),
+        url,
         headers: {"Authorization": "Token $token"},
       );
 
       if (res.statusCode == 200) {
-        final decoded = jsonDecode(res.body);
-        // web pode devolver em wrappers diferentes — tratar:
-        final data = decoded['data']?['value'] ?? decoded;
-        setState(() => task = data);
+        setState(() => task = jsonDecode(res.body));
       } else {
         _showMessage("Erro ao buscar chamado (${res.statusCode}).");
       }
@@ -79,19 +76,17 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
       "ONGOING": "Em Andamento",
       "DONE": "Concluído",
       "FINISHED": "Finalizado",
-      "CANCELLED": "Cancelado"
+      "CANCELLED": "Cancelado",
     };
     return map[raw] ?? raw;
   }
 
-  /// Retorna o último status (string) ou 'OPEN' se não existir
   String _getCurrentStatus() {
-    final list = task?['TaskStatus_task_FK'] as List<dynamic>?;
-    if (list == null || list.isEmpty) return "OPEN";
-    return (list.last['status'] ?? 'OPEN').toString();
+    final list = (task?['TaskStatus_task_FK'] as List<dynamic>?) ?? [];
+    if (list.isEmpty) return "OPEN";
+    return list.last["status"].toString();
   }
 
-  /// Retorna as opções válidas para avançar a partir do status atual
   List<String> _allowedNextStatuses(String current) {
     switch (current) {
       case "WAITING_RESPONSIBLE":
@@ -109,7 +104,8 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 75);
+    final picked =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 75);
     if (picked != null) {
       setState(() => pickedImage = File(picked.path));
     }
@@ -117,7 +113,8 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
 
   Future<void> _selectFromGallery() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
+    final picked =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
     if (picked != null) {
       setState(() => pickedImage = File(picked.path));
     }
@@ -125,8 +122,9 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
 
   Future<void> _submitStatus() async {
     final desc = descriptionController.text.trim();
+
     if (selectedStatus == null) {
-      _showMessage("Selecione um status para avançar.");
+      _showMessage("Selecione um status.");
       return;
     }
     if (desc.isEmpty) {
@@ -144,59 +142,43 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
     }
 
     try {
-      // Endpoint: POST /api/taskstatus/
-      final uri = Uri.parse("http://localhost:8001/api/taskstatus/");
+      final url = Uri.parse("$baseApi/api/taskstatus/");
 
-      final request = http.MultipartRequest("POST", uri);
-      request.headers['Authorization'] = "Token $token";
+      final request = http.MultipartRequest("POST", url);
+      request.headers["Authorization"] = "Token $token";
 
-      request.fields['task_FK'] = widget.taskId.toString();
-      request.fields['status'] = selectedStatus!;
-      request.fields['description'] = desc;
-
-      // Se backend exigir creator_FK, normalmente ele usa o token para quem cria.
-      // Se precisar enviar, descomente e ajuste:
-      // request.fields['creator_FK'] = usuarioId.toString();
+      request.fields["task_FK"] = widget.taskId.toString();
+      request.fields["status"] = selectedStatus!;
+      request.fields["description"] = desc;
 
       if (pickedImage != null) {
-        final file = await http.MultipartFile.fromPath('image', pickedImage!.path);
-        request.files.add(file);
+        request.files.add(await http.MultipartFile.fromPath(
+          "image",
+          pickedImage!.path,
+        ));
       }
 
       final streamed = await request.send();
       final res = await http.Response.fromStream(streamed);
 
-      if (res.statusCode == 201 || res.statusCode == 200) {
+      if (res.statusCode == 200 || res.statusCode == 201) {
         _showMessage("Status atualizado com sucesso.");
-        // Recarrega o chamado para atualizar timeline e status atual
+
         await _fetchTask();
-        // limpar form
+
         setState(() {
           selectedStatus = null;
           descriptionController.clear();
           pickedImage = null;
         });
       } else {
-        // tenta detalhar erro
-        String body = res.body;
-        String msg = "Erro ao atualizar status (${res.statusCode}).";
-        try {
-          final json = jsonDecode(body);
-          msg = json['detail']?.toString() ?? json.toString();
-        } catch (_) {}
-        _showMessage(msg);
+        _showMessage("Erro ao atualizar (${res.statusCode})");
       }
     } catch (e) {
       _showMessage("Erro ao enviar status.");
     } finally {
       setState(() => submitting = false);
     }
-  }
-
-  void _showMessage(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
   }
 
   void _openImage(String url) {
@@ -206,55 +188,44 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
         child: InteractiveViewer(
           child: Container(
             color: Colors.black,
-            child: Image.network(url, fit: BoxFit.contain, loadingBuilder: (ctx, child, progress) {
-              if (progress == null) return child;
-              return SizedBox(width: 200, height: 200, child: Center(child: CircularProgressIndicator()));
-            }),
+            child: Image.network(url, fit: BoxFit.contain),
           ),
         ),
       ),
     );
   }
 
+  // ===================== UI COMPONENTS ===================== //
+
   Widget _buildHeader() {
     final current = _getCurrentStatus();
     final urg = task?['urgency_level'] ?? '-';
+
     return Container(
-      width: double.infinity,
       padding: EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0,4))],
-      ),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ID e status
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Chamado #${task?['id'] ?? widget.taskId}", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text("Chamado #${task?['id']}",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey.shade300)
-                ),
-                child: Text(_formatStatusLabel(current), style: TextStyle(fontWeight: FontWeight.w700)),
+                decoration: _chipDecoration(),
+                child: Text(_formatStatusLabel(current),
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               )
             ],
           ),
           SizedBox(height: 8),
-          Text(task?['name'] ?? '-', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          Text(task?["name"] ?? "-",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           SizedBox(height: 6),
-          Row(
-            children: [
-              Text("Urgência: ", style: TextStyle(color: Colors.grey[700])),
-              Text(urg.toString(), style: TextStyle(fontWeight: FontWeight.w600)),
-            ],
-          ),
+          Text("Urgência: $urg",
+              style: TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -263,25 +234,31 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
   Widget _buildInfoCard() {
     return Container(
       padding: EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0,4))],
-      ),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Solicitante", style: TextStyle(color: Colors.grey[600])),
-          SizedBox(height: 6),
-          Text(task?['creator_FK']?['name'] ?? '-', style: TextStyle(fontWeight: FontWeight.w700)),
+          Text("Solicitante:", style: TextStyle(color: Colors.grey[700])),
+          SizedBox(height: 4),
+          Text(task?["creator_FK"]?["name"] ?? "-",
+              style: TextStyle(fontWeight: FontWeight.w700)),
           SizedBox(height: 12),
-          Text("Ativo", style: TextStyle(color: Colors.grey[600])),
-          SizedBox(height: 6),
-          Text(task?['equipment_FK']?['name'] ?? '-', style: TextStyle(fontWeight: FontWeight.w700)),
+          Text("Ativo:", style: TextStyle(color: Colors.grey[700])),
+          SizedBox(height: 4),
+          Text(task?["equipment_FK"]?["name"] ?? "-",
+              style: TextStyle(fontWeight: FontWeight.w700)),
           SizedBox(height: 12),
-          Text("Abertura", style: TextStyle(color: Colors.grey[600])),
-          SizedBox(height: 6),
-          Text(task?['creation_date'] != null ? DateTime.parse(task!['creation_date']).toLocal().toString().split('.')[0] : '-', style: TextStyle(fontWeight: FontWeight.w700)),
+          Text("Abertura:", style: TextStyle(color: Colors.grey[700])),
+          SizedBox(height: 4),
+          Text(
+            task?["creation_date"] != null
+                ? DateTime.parse(task!["creation_date"])
+                    .toLocal()
+                    .toString()
+                    .split('.')[0]
+                : "-",
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
@@ -289,68 +266,55 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
 
   Widget _buildTimeline() {
     final list = (task?['TaskStatus_task_FK'] as List<dynamic>?) ?? [];
+
     if (list.isEmpty) {
-      return Container(
-        padding: EdgeInsets.all(18),
-        child: Text("Nenhum histórico encontrado.", style: TextStyle(color: Colors.grey[700])),
-      );
+      return Text("Nenhum histórico encontrado.");
     }
 
     return Column(
-      children: list.reversed.map((s) {
-        final status = s['status'] ?? '';
-        final desc = s['description'] ?? '';
-        final timestamp = s['timestamp'] ?? s['created_at'] ?? '';
-        final imageUrl = s['image'] ?? null; // ajustar conforme campo real
+      children: list.reversed.map((item) {
+        final status = item["status"] ?? "";
+        final desc = item["description"] ?? "";
+        final timestamp = item["timestamp"] ?? item["created_at"] ?? "";
+        final image = item["image"];
+
+        final imgUrl = (image != null && image.toString().isNotEmpty)
+            ? "$baseApi$image"
+            : null;
+
         return Container(
           margin: EdgeInsets.only(bottom: 12),
           padding: EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0,4))],
-          ),
+          decoration: _cardDecoration(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(_formatStatusLabel(status.toString()), style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(timestamp.toString().replaceAll("T", " "), style: TextStyle(color: Colors.grey[600], fontSize: 12))
+                  Text(_formatStatusLabel(status),
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(timestamp.toString().replaceAll("T", " "),
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
-              if (desc.toString().isNotEmpty) ...[
+              if (desc.isNotEmpty) ...[
                 SizedBox(height: 8),
-                Text(desc.toString()),
+                Text(desc),
               ],
-              if (imageUrl != null && imageUrl.toString().isNotEmpty) ...[
-                SizedBox(height: 8),
+              if (imgUrl != null) ...[
+                SizedBox(height: 10),
                 GestureDetector(
-                  onTap: () => _openImage(imageUrl.toString().startsWith('http') ? imageUrl.toString() : "http://localhost:8001${imageUrl.toString()}"),
+                  onTap: () => _openImage(imgUrl),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      imageUrl.toString().startsWith('http') ? imageUrl.toString() : "http://localhost:8001${imageUrl.toString()}",
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (ctx, child, progress) {
-                        if (progress == null) return child;
-                        return Container(
-                          height: 120,
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      },
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 120,
-                        color: Colors.grey[200],
-                        child: Center(child: Icon(Icons.broken_image)),
-                      ),
-                    ),
+                    child: Image.network(imgUrl,
+                        height: 140,
+                        width: double.infinity,
+                        fit: BoxFit.cover),
                   ),
-                )
-              ],
+                ),
+              ]
             ],
           ),
         );
@@ -362,96 +326,85 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
     final current = _getCurrentStatus();
     final options = _allowedNextStatuses(current);
 
-    if (options.isEmpty) {
-      return SizedBox.shrink();
-    }
+    if (options.isEmpty) return SizedBox.shrink();
 
     return Container(
       padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0,4))],
-      ),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Avançar Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          SizedBox(height: 12),
+          Text("Avançar Status",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 14),
 
-          // dropdown
           DropdownButtonFormField<String>(
             value: selectedStatus,
-            decoration: InputDecoration(
-              filled: true, fillColor: Colors.grey[50],
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))
-            ),
-            items: options.map((o) => DropdownMenuItem(value: o, child: Text(_formatStatusLabel(o)))).toList(),
+            items: options
+                .map((o) => DropdownMenuItem(
+                    value: o, child: Text(_formatStatusLabel(o))))
+                .toList(),
             onChanged: (v) => setState(() => selectedStatus = v),
-            hint: Text("Selecione o próximo status"),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[100],
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           ),
 
-          SizedBox(height: 12),
+          SizedBox(height: 14),
 
-          // descrição obrigatória
           TextField(
             controller: descriptionController,
-            maxLines: 4,
+            maxLines: 3,
             decoration: InputDecoration(
-              hintText: "Descreva o que foi feito (obrigatório)",
+              hintText: "Descreva o que foi feito...",
               filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))
+              fillColor: Colors.grey[100],
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
 
-          SizedBox(height: 12),
+          SizedBox(height: 14),
 
-          // imagens
           Row(
             children: [
               ElevatedButton.icon(
                 onPressed: _pickImage,
                 icon: Icon(Icons.camera_alt),
-                label: Text("Tirar foto"),
-                style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF1E293B)),
+                label: Text("Foto"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey,
+                ),
               ),
               SizedBox(width: 10),
               OutlinedButton.icon(
                 onPressed: _selectFromGallery,
-                icon: Icon(Icons.photo_library),
+                icon: Icon(Icons.photo),
                 label: Text("Galeria"),
               ),
-              SizedBox(width: 10),
-              if (pickedImage != null)
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Image.file(pickedImage!, height: 64, fit: BoxFit.cover),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: GestureDetector(
-                          onTap: () => setState(() => pickedImage = null),
-                          child: Container(
-                            color: Colors.black38,
-                            child: Icon(Icons.close, color: Colors.white, size: 18),
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-                ),
+              if (pickedImage != null) ...[
+                SizedBox(width: 10),
+                Image.file(pickedImage!, height: 60),
+              ]
             ],
           ),
 
-          SizedBox(height: 14),
+          SizedBox(height: 20),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: submitting ? null : _submitStatus,
-              child: submitting ? SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text("Confirmar"),
-              style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF1E293B), padding: EdgeInsets.symmetric(vertical: 14)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueGrey[900],
+                padding: EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: submitting
+                  ? CircularProgressIndicator(color: Colors.white)
+                  : Text("Confirmar"),
             ),
           ),
         ],
@@ -459,34 +412,49 @@ class _ChamadoDetalhesScreenState extends State<ChamadoDetalhesScreen> {
     );
   }
 
+  Decoration _cardDecoration() => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
+        ],
+      );
+
+  Decoration _chipDecoration() => BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(20),
+      );
+
+  void _showMessage(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Detalhes do Chamado"),
-        backgroundColor: Color(0xFF1E293B),
-      ),
-      backgroundColor: Color(0xFFF4F6FA),
+      appBar:
+          AppBar(title: Text("Detalhes do Chamado"), backgroundColor: Colors.blueGrey[900]),
       body: loading
           ? Center(child: CircularProgressIndicator())
           : task == null
-              ? Center(child: Text("Chamado não encontrado"))
+              ? Center(child: Text("Chamado não encontrado."))
               : RefreshIndicator(
                   onRefresh: _fetchTask,
                   child: SingleChildScrollView(
                     physics: AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(18),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildHeader(),
-                        SizedBox(height: 12),
+                        SizedBox(height: 14),
                         _buildInfoCard(),
                         SizedBox(height: 16),
                         _buildTimeline(),
-                        SizedBox(height: 18),
+                        SizedBox(height: 20),
                         _buildAdvanceSection(),
-                        SizedBox(height: 40),
+                        SizedBox(height: 50),
                       ],
                     ),
                   ),

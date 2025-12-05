@@ -3,92 +3,81 @@ import 'package:http/http.dart' as http;
 import 'package:cagesystems/services/token_storage.dart';
 
 class AtivosService {
-  // TROQUE localhost → IP da sua máquina
-  static const String base = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/equipment/";
+  static const String base =
+      "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/equipment/";
 
-  /// Normaliza retorno exatamente como seu norm()
-  static dynamic normalize(dynamic data) {
-    return data["data"]?["value"]?["results"] ??
-           data["data"]?["results"] ??
-           data["results"] ??
-           data ??
-           [];
+  /// Normaliza listas do DRF
+  static List<dynamic> _normalizeList(dynamic data) {
+    if (data is Map && data.containsKey("results")) return data["results"];
+    if (data is List) return data;
+    if (data is Map) return [data];
+    return [];
   }
 
   /// ============================================================
-  /// 🔹 GET /equipment/?filtros — Lista equipamentos
+  /// 🔹 GET /equipment/?name= — Lista equipamentos
   /// ============================================================
   static Future<List<dynamic>> getAtivos({String? search}) async {
     final token = await TokenStorage.getToken();
+    if (token == null) return [];
 
     final uri = Uri.parse(base).replace(
       queryParameters: search != null && search.isNotEmpty
-          ? {"name": search}
+          ? {"name": search} // sua API usa name como filtro
           : null,
     );
 
-    final response = await http.get(
-      uri,
-      headers: {"Authorization": "Bearer $token"},
-    );
+    print("🔎 GET Ativos → $uri");
+    print("🔑 Token → $token");
 
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-      return normalize(decoded);
+    try {
+      final response = await http.get(
+        uri,
+        headers: {"Authorization": "Token $token"},
+      );
+
+      print("📥 Status Ativos: ${response.statusCode}");
+      print("📥 Body Ativos: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        return _normalizeList(decoded);
+      }
+    } catch (e) {
+      print("❌ ERRO getAtivos: $e");
     }
 
     return [];
   }
 
   /// ============================================================
-  /// 🔹 GET /equipment/:id — Buscar detalhes
+  /// 🔹 GET /equipment/:id — Detalhes
   /// ============================================================
-  static Future<dynamic> getAtivoById(int id) async {
+  static Future<Map<String, dynamic>?> getAtivoById(int id) async {
     final token = await TokenStorage.getToken();
+    if (token == null) return null;
 
-    final response = await http.get(
-      Uri.parse("$base$id/"),
-      headers: {"Authorization": "Bearer $token"},
-    );
+    final uri = Uri.parse("$base$id/");
 
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-      return decoded["data"]?["value"] ?? decoded;
+    print("🔎 GET Ativo por ID → $uri");
+
+    try {
+      final response = await http.get(
+        uri,
+        headers: {"Authorization": "Token $token"},
+      );
+
+      print("📥 Status Ativo ID: ${response.statusCode}");
+      print("📥 Body Ativo ID: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) return decoded;
+      }
+    } catch (e) {
+      print("❌ ERRO getAtivoById: $e");
     }
+
     return null;
-  }
-
-  /// ============================================================
-  /// 🔹 GET /environment — Ambientes
-  /// ============================================================
-  static const String envBase = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/environment/";
-
-  static Future<List<dynamic>> getAmbientes() async {
-    final token = await TokenStorage.getToken();
-
-    final response = await http.get(
-      Uri.parse(envBase),
-      headers: {"Authorization": "Bearer $token"},
-    );
-
-    final decoded = jsonDecode(response.body);
-    return normalize(decoded);
-  }
-
-  /// ============================================================
-  /// 🔹 GET /category — Categorias
-  /// ============================================================
-  static const String catBase = "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/category/";
-
-  static Future<List<dynamic>> getCategorias() async {
-    final token = await TokenStorage.getToken();
-
-    final response = await http.get(
-      Uri.parse(catBase),
-      headers: {"Authorization": "Bearer $token"},
-    );
-
-    final decoded = jsonDecode(response.body);
-    return normalize(decoded);
   }
 }

@@ -30,6 +30,9 @@ class _DashboardMonitoramentoScreenState
     {"dia": "Quarta", "tarefa": "Instalação de equipamentos"},
   ];
 
+  static const String base =
+      "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net";
+
   @override
   void initState() {
     super.initState();
@@ -55,54 +58,66 @@ class _DashboardMonitoramentoScreenState
     setState(() => loading = false);
   }
 
+  /// GET Usuário logado
   Future<void> _fetchUser() async {
     final token = await _getToken();
     if (token == null) return;
 
-    final url =
-        Uri.parse("http://localhost:8001/api/auth/users/me/");
+    final url = Uri.parse("$base/api/auth/users/me/");
 
     final res = await http.get(url, headers: {
       "Authorization": "Token $token",
     });
+
+    print("USER STATUS: ${res.statusCode}");
+    print("USER BODY: ${res.body}");
 
     if (res.statusCode == 200) {
       user = jsonDecode(res.body);
     }
   }
 
+  /// GET Tasks
   Future<void> _fetchTasks() async {
     final token = await _getToken();
     if (token == null) return;
 
-    final url = Uri.parse("http://localhost:8001/api/task/");
+    final url = Uri.parse("$base/api/task/");
 
     final res = await http.get(url, headers: {
       "Authorization": "Token $token",
     });
 
+    print("TASKS STATUS: ${res.statusCode}");
+    print("TASKS BODY: ${res.body}");
+
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      tasks = decoded["results"] ?? decoded["data"]?["results"] ?? [];
+      tasks = decoded["results"] ?? [];
     }
   }
 
+  /// GET total usuários
   Future<void> _fetchUsersCount() async {
     final token = await _getToken();
     if (token == null) return;
 
-    final url = Uri.parse("http://localhost:8001/api/auth/users/");
+    final url = Uri.parse("$base/api/auth/users/");
 
     final res = await http.get(url, headers: {
       "Authorization": "Token $token",
     });
 
+    print("USERS STATUS: ${res.statusCode}");
+    print("USERS BODY: ${res.body}");
+
     if (res.statusCode == 200) {
       final decoded = jsonDecode(res.body);
-      totalClientes = (decoded["results"] ?? decoded).length;
+      totalClientes = (decoded["results"] ?? []).length;
     }
   }
 
+  /// PROCESSAMENTO DOS DADOS
   void _processDashboardData() {
     totalChamados = tasks.length;
 
@@ -112,13 +127,14 @@ class _DashboardMonitoramentoScreenState
         .length;
   }
 
-  // Obter último status
+  /// ÚLTIMO STATUS
   String _getLatestStatus(task) {
     final list = task["TaskStatus_task_FK"] ?? [];
     if (list.isEmpty) return "OPEN";
     return list.last["status"] ?? "OPEN";
   }
 
+  /// CONTAGEM DE STATUS
   Map<String, int> _countStatus() {
     final counts = <String, int>{};
 
@@ -126,7 +142,6 @@ class _DashboardMonitoramentoScreenState
       final status = _getLatestStatus(t);
       counts[status] = (counts[status] ?? 0) + 1;
     }
-
     return counts;
   }
 
@@ -164,27 +179,27 @@ class _DashboardMonitoramentoScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF4F6FA),
+      backgroundColor: const Color(0xFFF4F6FA),
       appBar: AppBar(
-        backgroundColor: Color(0xFF1E293B),
-        title: Text("Monitoramento"),
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text("Monitoramento"),
       ),
       body: loading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadDashboard,
               child: SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // HEADER
+                      // HEADER ====================================================
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(22),
+                        padding: const EdgeInsets.all(22),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                             colors: [Color(0xFF1E293B), Color(0xFF1E3A8A)],
                           ),
                           borderRadius: BorderRadius.circular(18),
@@ -192,42 +207,42 @@ class _DashboardMonitoramentoScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Olá ${user?["name"] ?? ""}",
-                                style: TextStyle(
+                            Text("Olá, ${user?["name"] ?? ""}",
+                                style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold)),
-                            SizedBox(height: 6),
+                            const SizedBox(height: 6),
                             Text(user?["email"] ?? "",
-                                style: TextStyle(
+                                style: const TextStyle(
                                     color: Colors.white70, fontSize: 14)),
                           ],
                         ),
                       ),
 
-                      SizedBox(height: 22),
+                      const SizedBox(height: 22),
 
-                      // CARDS SUPERIORES
+                      // CARDS ====================================================
                       Row(
                         children: [
-                          _cardInfo(
-                              "Total de Chamados", totalChamados.toString()),
-                          SizedBox(width: 12),
+                          _cardInfo("Total de Chamados",
+                              totalChamados.toString()),
+                          const SizedBox(width: 12),
                           _cardInfo("Mensagens", mensagens.toString()),
-                          SizedBox(width: 12),
-                          _cardInfo(
-                              "Total de Clientes", totalClientes.toString()),
+                          const SizedBox(width: 12),
+                          _cardInfo("Total de Clientes",
+                              totalClientes.toString()),
                         ],
                       ),
 
-                      SizedBox(height: 28),
+                      const SizedBox(height: 28),
 
-                      // GRÁFICO
+                      // GRÁFICO ====================================================
                       _buildStatusChart(),
 
-                      SizedBox(height: 28),
+                      const SizedBox(height: 28),
 
-                      // AGENDA SIMPLES
+                      // AGENDA ====================================================
                       _buildAgenda(),
                     ],
                   ),
@@ -240,11 +255,11 @@ class _DashboardMonitoramentoScreenState
   Widget _cardInfo(String label, String value) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(18),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 8,
@@ -257,10 +272,12 @@ class _DashboardMonitoramentoScreenState
           children: [
             Text(label,
                 style: TextStyle(color: Colors.grey[700], fontSize: 13)),
-            SizedBox(height: 6),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -272,30 +289,30 @@ class _DashboardMonitoramentoScreenState
 
     if (counts.isEmpty) {
       return Container(
-        padding: EdgeInsets.all(18),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
         ),
-        child: Center(
+        child: const Center(
           child: Text("Nenhum chamado para exibir."),
         ),
       );
     }
 
     return Container(
-      padding: EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
-          Text(
+          const Text(
             "Distribuição de Chamados por Status",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           SizedBox(
             height: 260,
             child: PieChart(
@@ -312,7 +329,7 @@ class _DashboardMonitoramentoScreenState
               ),
             ),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Wrap(
             spacing: 12,
             runSpacing: 8,
@@ -321,10 +338,8 @@ class _DashboardMonitoramentoScreenState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                      width: 12,
-                      height: 12,
-                      color: _statusColor(e.key)),
-                  SizedBox(width: 4),
+                      width: 12, height: 12, color: _statusColor(e.key)),
+                  const SizedBox(width: 4),
                   Text("${_labelStatus(e.key)} (${e.value})"),
                 ],
               );
@@ -338,7 +353,7 @@ class _DashboardMonitoramentoScreenState
   Widget _buildAgenda() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -346,21 +361,22 @@ class _DashboardMonitoramentoScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Agenda da Semana",
+          const Text("Agenda da Semana",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
 
           ...agenda.map((item) {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  Icon(Icons.calendar_today, size: 18, color: Colors.blue),
-                  SizedBox(width: 8),
+                  const Icon(Icons.calendar_today,
+                      size: 18, color: Colors.blue),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       "${item["dia"]}: ${item["tarefa"]}",
-                      style: TextStyle(fontSize: 14),
+                      style: const TextStyle(fontSize: 14),
                     ),
                   )
                 ],
@@ -368,7 +384,7 @@ class _DashboardMonitoramentoScreenState
             );
           }).toList(),
         ],
-      ),
+      ), 
     );
   }
 }

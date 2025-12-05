@@ -31,8 +31,8 @@ export const createEquipment = async (equipmentData: any) => {
     name: equipmentData.name,
     code: equipmentData.code,
     description: equipmentData.description,
-    category_FK_id: Number(equipmentData.category_FK_id),
-    environment_FK_id: Number(equipmentData.environment_FK_id),
+    category_id: Number(equipmentData.category_FK_id),
+    environment_id: Number(equipmentData.environment_FK_id),
   }
 
   const { data } = await $authFetch(`http://localhost:8001/api/equipment/`, {
@@ -51,8 +51,8 @@ export const updateEquipment = async (id: number | string, data: any) => {
     name: data.name,
     code: data.code,
     description: data.description,
-    category_FK_id: Number(data.category_FK_id),
-    environment_FK_id: Number(data.environment_FK_id)
+    category_id: Number(data.category_FK_id),
+    environment_id: Number(data.environment_FK_id),
   }
 
   const response = await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
@@ -87,4 +87,3 @@ export const deleteEquipment = async (id: number | string) => {
 
   return response
 }
-

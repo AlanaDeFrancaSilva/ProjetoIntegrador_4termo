@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'signup_screen.dart';
+import 'package:cagesystems/services/token_storage.dart'; // <-- USE O TOKENSTORAGE CORRETAMENTE
+
 import 'home_screen.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -40,7 +41,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => loading = true);
 
     try {
-      final url = Uri.parse("http://localhost:8001/api/auth/token/login/");
+      final url = Uri.parse(
+        "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/auth/token/login/",
+      );
 
       final response = await http.post(
         url,
@@ -51,29 +54,33 @@ class _LoginScreenState extends State<LoginScreen> {
         }),
       );
 
+      print("🔍 LOGIN STATUS: ${response.statusCode}");
+      print("🔍 LOGIN BODY: ${response.body}");
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data["auth_token"];
 
         if (token != null) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString("auth_token", token);
+          // 🔥 SALVAR TOKEN DO JEITO CORRETO
+          await TokenStorage.saveToken(token);
 
-          print("TOKEN SALVO: $token");
+          print("🔑 TOKEN SALVO CORRETAMENTE: $token");
 
-         Navigator.push(
-  context,
-  MaterialPageRoute(builder: (_) => HomeScreen()),
-);
+          // NAVEGAÇÃO
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => HomeScreen()),
+          );
         } else {
           _showError("Erro inesperado: token não recebido.");
         }
       } else {
-        // Erro do backend (senha incorreta, usuário não existe...)
         final body = jsonDecode(response.body);
         _showError(body["detail"] ?? "Email ou senha incorretos.");
       }
     } catch (e) {
+      print("❌ LOGIN ERROR: $e");
       _showError("Erro ao conectar ao servidor.");
     } finally {
       setState(() => loading = false);
@@ -105,11 +112,13 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 _buildHeader(),
 
+                // LOGO
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
                   child: Image.asset('assets/logo.png', height: 100),
                 ),
 
+                // FORM
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Center(
@@ -131,6 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
 
+          // LOADING
           if (loading)
             Container(
               color: Colors.black.withOpacity(0.4),
@@ -144,41 +154,27 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // =====================================================
-  //                   HEADER COM IMAGEM
+  //                   HEADER
   // =====================================================
   Widget _buildHeader() {
-    return Stack(
-      children: [
-        Container(
-          height: 80,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF003366), Color(0xFF001F3F)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
+    return Container(
+      height: 80,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF003366), Color(0xFF001F3F)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Image.asset(
-            'assets/fundo.png',
-            fit: BoxFit.cover,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   // =====================================================
-  //                     CARD LOGIN
+  //                   CARD LOGIN
   // =====================================================
   Widget _buildLoginCard() {
     return Card(
       elevation: 5,
-      shadowColor: Colors.black.withOpacity(0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -188,34 +184,35 @@ class _LoginScreenState extends State<LoginScreen> {
             const Text('Acesse o portal',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(
-              'Entre usando seu e-mail e senha cadastrados',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
+            Text('Entre usando seu e-mail e senha cadastrados',
+                style: TextStyle(fontSize: 14, color: Colors.grey)),
             const SizedBox(height: 24),
 
+            // EMAIL
             _buildTextField(
               controller: _emailController,
               label: 'E-MAIL',
               hint: 'exemplo@mail.com',
               keyboardType: TextInputType.emailAddress,
             ),
+
             const SizedBox(height: 16),
 
+            // SENHA
             _buildTextField(
               controller: _passwordController,
               label: 'SENHA',
               hint: 'Digite sua senha',
               obscureText: true,
             ),
+
             const SizedBox(height: 32),
 
+            // BOTÃO ENTRAR
             ElevatedButton(
               onPressed: loading ? null : _login,
-              child: const Text(
-                'Entrar',
-                style: TextStyle(fontSize: 16, color: Colors.white),
-              ),
+              child: const Text('Entrar',
+                  style: TextStyle(fontSize: 16, color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF343A40),
                 minimumSize: const Size(double.infinity, 50),
@@ -235,8 +232,6 @@ class _LoginScreenState extends State<LoginScreen> {
   // =====================================================
   Widget _buildSignUpCard() {
     return Card(
-      elevation: 5,
-      shadowColor: Colors.black.withOpacity(0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -279,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // =====================================================
-  //              COMPONENTE TEXT FIELD
+  //              INPUT COMPONENT
   // =====================================================
   Widget _buildTextField({
     required TextEditingController controller,
@@ -292,7 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: TextStyle(
+            style: const TextStyle(
                 fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
         const SizedBox(height: 8),
         TextField(
@@ -301,18 +296,11 @@ class _LoginScreenState extends State<LoginScreen> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hint,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide:
-                  const BorderSide(color: Color(0xFF1E293B), width: 2),
+              borderSide: const BorderSide(),
             ),
           ),
         ),

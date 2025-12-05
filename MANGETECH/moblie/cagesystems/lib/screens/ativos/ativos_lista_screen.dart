@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../services/ativos_service.dart';
 import 'ativo_detalhes_screen.dart';
 
 class AtivosListaScreen extends StatefulWidget {
@@ -23,59 +20,28 @@ class _AtivosListaScreenState extends State<AtivosListaScreen> {
     _fetchAtivos();
   }
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("auth_token");
-  }
-
   Future<void> _fetchAtivos() async {
     setState(() => loading = true);
 
-    final token = await _getToken();
-    if (token == null) {
-      _showMessage("Token não encontrado.");
-      return;
-    }
-
     try {
-      final url =
-          Uri.parse("http://localhost:8001/api/equipment/?name=$searchQuery");
-
-      final res = await http.get(url, headers: {
-        "Authorization": "Token $token",
+      final data = await AtivosService.getAtivos(search: searchQuery);
+      setState(() {
+        ativos = data;
+        loading = false;
       });
-
-      if (res.statusCode == 200) {
-        final decoded = jsonDecode(res.body);
-
-        // 🔥 GARANTE FORMATO LISTA
-        final list =
-            decoded["data"]?["value"]?["results"] ??
-                decoded["data"]?["results"] ??
-                decoded["results"] ??
-                (decoded is List ? decoded : [decoded]);
-
-        setState(() => ativos = List.from(list));
-      } else {
-        _showMessage("Erro ao buscar ativos (${res.statusCode}).");
-      }
     } catch (e) {
-      _showMessage("Erro ao conectar ao servidor.");
-    } finally {
       setState(() => loading = false);
+      print("❌ ERRO na tela de ativos: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao carregar ativos.")),
+      );
     }
   }
 
-  void _showMessage(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  // 🔍 Função auxiliar segura, sem estouro de tipo
-  String safeField(dynamic value) {
-    if (value == null) return "-";
-    if (value is Map && value.containsKey("name")) return value["name"];
-    return value.toString();
+  String safeField(dynamic v) {
+    if (v == null) return "-";
+    if (v is Map && v.containsKey("name")) return v["name"].toString();
+    return v.toString();
   }
 
   @override
@@ -85,7 +51,8 @@ class _AtivosListaScreenState extends State<AtivosListaScreen> {
         title: Text("Ativos"),
         backgroundColor: Color(0xFF1E293B),
       ),
-      backgroundColor: Color(0xFFF4F6FA),
+      backgroundColor: const Color(0xFFF4F6FA),
+
       body: Column(
         children: [
           // 🔎 SEARCH
@@ -111,71 +78,77 @@ class _AtivosListaScreenState extends State<AtivosListaScreen> {
 
           Expanded(
             child: loading
-                ? Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: ativos.length,
-                    itemBuilder: (_, i) {
-                      final ativo = ativos[i];
+                ? const Center(child: CircularProgressIndicator())
+                : ativos.isEmpty
+                    ? const Center(child: Text("Nenhum ativo encontrado."))
+                    : ListView.builder(
+                        itemCount: ativos.length,
+                        itemBuilder: (_, i) {
+                          final ativo = ativos[i];
 
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AtivoDetalhesScreen(
-                                ativoId: ativo["id"],
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AtivoDetalhesScreen(
+                                    ativoId: ativo["id"],
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 8,
+                                    offset: Offset(0, 4),
+                                  )
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    safeField(ativo["name"]),
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Código: ${safeField(ativo["code"])}",
+                                    style:
+                                        TextStyle(color: Colors.grey.shade700),
+                                  ),
+
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Categoria: ${safeField(ativo["category_FK"])}",
+                                    style:
+                                        TextStyle(color: Colors.grey.shade700),
+                                  ),
+
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Ambiente: ${safeField(ativo["environment_FK"])}",
+                                    style:
+                                        TextStyle(color: Colors.grey.shade700),
+                                  ),
+                                ],
                               ),
                             ),
                           );
                         },
-                        child: Container(
-                          margin:
-                              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          padding: EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: 8,
-                                  offset: Offset(0, 4))
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                safeField(ativo["name"]),
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 6),
-
-                              Text(
-                                "Código: ${safeField(ativo["code"])}",
-                                style: TextStyle(color: Colors.grey[700]),
-                              ),
-                              SizedBox(height: 6),
-
-                              Text(
-                                "Categoria: ${safeField(ativo["category_FK"])}",
-                                style: TextStyle(color: Colors.grey[700]),
-                              ),
-                              SizedBox(height: 6),
-
-                              Text(
-                                "Ambiente: ${safeField(ativo["environment_FK"])}",
-                                style: TextStyle(color: Colors.grey[700]),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                      ),
           )
         ],
       ),

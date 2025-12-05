@@ -1,9 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 import '../ativos/ativo_detalhes_screen.dart';
 
@@ -15,9 +13,14 @@ class QRScanScreen extends StatefulWidget {
 }
 
 class _QRScanScreenState extends State<QRScanScreen> {
-  bool _isScanning = true;
-  bool _processingScan = false;
-  MobileScannerController controller = MobileScannerController();
+  bool _processing = false;
+
+  final MobileScannerController controller = MobileScannerController(
+    facing: CameraFacing.back,
+    detectionSpeed: DetectionSpeed.normal,
+    formats: [BarcodeFormat.qrCode],
+    autoStart: true,
+  );
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -25,46 +28,54 @@ class _QRScanScreenState extends State<QRScanScreen> {
   }
 
   void _onDetect(BarcodeCapture capture) async {
-    if (!_isScanning || _processingScan) return;
+    if (_processing) return;
 
-    final barcode = capture.barcodes.first.rawValue;
+    final code = capture.barcodes.first.rawValue;
+    print("\n===============================");
+    print("📌 QR LIDO: '$code'");
+    print("===============================\n");
 
-    if (barcode == null) return;
+    if (code == null) return;
 
-    setState(() => _processingScan = true);
+    final id = int.tryParse(code.trim());
 
-    final scannedId = barcode.trim();
-
-    // Verifica se é número
-    final id = int.tryParse(scannedId);
+    print("🔎 ID PARSEADO: $id");
 
     if (id == null) {
-      _showMessage("QR inválido. Esperado apenas o ID do ativo.");
-      setState(() => _processingScan = false);
+      _showMessage("QR inválido. Valor lido: $code");
       return;
     }
 
-    // Agora validar no backend
-    await _validateAndOpen(id);
+    _processing = true;
+    controller.stop();
 
-    setState(() => _processingScan = false);
-  }
-
-  Future<void> _validateAndOpen(int id) async {
     final token = await _getToken();
+    print("🔑 TOKEN: $token");
+
     if (token == null) {
       _showMessage("Token não encontrado.");
+      _processing = false;
+      controller.start();
       return;
     }
 
+    final url = Uri.parse(
+      "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/equipment/$id/",
+    );
+
+    print("🌐 ACESSANDO URL: $url");
+
     try {
-      final url = Uri.parse("http://localhost:8001/api/equipment/$id/");
       final res = await http.get(url, headers: {
         "Authorization": "Token $token",
       });
 
+      print("📡 STATUS DA API: ${res.statusCode}");
+      print("📦 RESPOSTA: ${res.body}");
+
       if (res.statusCode == 200) {
-        // OK → abre a tela do ativo
+        if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -73,9 +84,14 @@ class _QRScanScreenState extends State<QRScanScreen> {
         );
       } else {
         _showMessage("Ativo não encontrado.");
+        _processing = false;
+        controller.start();
       }
     } catch (e) {
-      _showMessage("Erro ao validar QR Code.");
+      print("❌ ERRO AO VALIDAR QR: $e");
+      _showMessage("Erro ao validar QR Code: $e");
+      _processing = false;
+      controller.start();
     }
   }
 
@@ -95,67 +111,39 @@ class _QRScanScreenState extends State<QRScanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Escanear QR Code"),
+        title: const Text("Escanear QR Code"),
         backgroundColor: Color(0xFF1E293B),
       ),
       body: Stack(
         children: [
-          // CAMERA
           MobileScanner(
             controller: controller,
             onDetect: _onDetect,
           ),
 
-          // MÁSCARA ESCURA EM VOLTA
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                color: Colors.black.withOpacity(0.35),
-              ),
-            ),
-          ),
-
-          // QUADRADO CENTRAL
+          // Moldura
           Center(
             child: Container(
-              width: 280,
-              height: 280,
+              width: 260,
+              height: 260,
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.white, width: 3),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
               ),
             ),
           ),
 
-          // TEXTO INFORMATIVO
-          Positioned(
+          const Positioned(
             bottom: 40,
             left: 0,
             right: 0,
             child: Center(
               child: Text(
-                "Aponte para um QR Code de Ativo",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  shadows: [
-                    Shadow(
-                        blurRadius: 6,
-                        color: Colors.black,
-                        offset: Offset(0, 2))
-                  ],
-                ),
+                "Aponte para o QR Code do Ativo",
+                style: TextStyle(color: Colors.white, fontSize: 18),
               ),
             ),
           ),
-
-          if (_processingScan)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-            ),
         ],
       ),
     );

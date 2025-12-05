@@ -15,9 +15,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Estados do backend
   String userName = "";
   int totalChamados = 0;
+
+  static const String base =
+      "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net";
 
   @override
   void initState() {
@@ -26,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ==========================================================
-  //                🔥 BUSCA DADOS DO BACKEND
+  //              🔥 BUSCA DADOS DO BACKEND (AZURE)
   // ==========================================================
   Future<void> _loadDashboardData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -35,11 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (token == null) return;
 
     try {
-      // USER
+      // ----------------- USER -----------------
       final userRes = await http.get(
-        Uri.parse("http://localhost:8001/api/auth/users/me/"),
+        Uri.parse("$base/api/auth/users/me/"),
         headers: {"Authorization": "Token $token"},
       );
+
+      print("USER STATUS: ${userRes.statusCode}");
+      print("USER BODY: ${userRes.body}");
 
       if (userRes.statusCode == 200) {
         final userData = jsonDecode(userRes.body);
@@ -48,23 +53,22 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
 
-      // TASKS
+      // ----------------- TASKS -----------------
       final taskRes = await http.get(
-        Uri.parse("http://localhost:8001/api/task/"),
+        Uri.parse("$base/api/task/"),
         headers: {"Authorization": "Token $token"},
       );
+
+      print("TASK STATUS: ${taskRes.statusCode}");
+      print("TASK BODY: ${taskRes.body}");
 
       if (taskRes.statusCode == 200) {
         final decoded = jsonDecode(taskRes.body);
 
-        List list =
-            decoded["results"] ??
-            decoded["data"]?["value"]?["results"] ??
-            decoded["data"]?["results"] ??
-            decoded;
+        List resultList = decoded["results"] ?? [];
 
         setState(() {
-          totalChamados = list.length;
+          totalChamados = resultList.length;
         });
       }
     } catch (e) {
@@ -78,10 +82,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF4F6FA),
+      backgroundColor: const Color(0xFFF4F6FA),
       appBar: AppBar(
         title: Text("Olá, $userName", style: TextStyle(fontSize: 20)),
-        backgroundColor: Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF1E293B),
         centerTitle: true,
       ),
 
@@ -120,13 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: TextStyle(
                               fontSize: 44,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                    blurRadius: 14,
-                                    color: Colors.black45,
-                                    offset: Offset(0, 3))
-                              ]),
+                              color: Colors.white),
                         ),
                         Text(
                           "Registrados no sistema",
@@ -166,9 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             SizedBox(height: 28),
 
-            // ----------------------------------------------------
-            //            🔥 IMAGEM FIXA (SEM CARROSSEL)
-            // ----------------------------------------------------
+            // ---------------- IMAGEM DO BANNER ----------------
             Container(
               height: 300,
               padding: EdgeInsets.all(18),
@@ -233,8 +229,8 @@ class _HomeScreenState extends State<HomeScreen> {
     required Widget page,
   }) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-          context, MaterialPageRoute(builder: (_) => page)),
+      onTap: () =>
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
       child: Container(
         padding: EdgeInsets.all(22),
         decoration: BoxDecoration(
@@ -252,8 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(icon, size: 40, color: Color(0xFF1E293B)),
             SizedBox(width: 18),
             Text(title,
-                style:
-                    TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

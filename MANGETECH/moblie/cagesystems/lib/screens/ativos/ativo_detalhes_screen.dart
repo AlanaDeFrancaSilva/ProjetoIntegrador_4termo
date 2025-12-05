@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../services/ativos_service.dart';
+import '../../services/chamados_service.dart';
 import '../chamados/chamado_detalhes_screen.dart';
 
 class AtivoDetalhesScreen extends StatefulWidget {
@@ -26,277 +25,220 @@ class _AtivoDetalhesScreenState extends State<AtivoDetalhesScreen> {
     _loadAll();
   }
 
-  // ================================================================
-  //                       SAFE FIELD
-  // ================================================================
-  String safeField(dynamic value) {
-    if (value == null) return "-";
-
-    if (value is Map) {
-      if (value.containsKey("name")) return value["name"].toString();
-      if (value.containsKey("title")) return value["title"].toString();
-    }
-
-    return value.toString();
-  }
-
-  // ================================================================
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("auth_token");
-  }
-
   Future<void> _loadAll() async {
     setState(() => loading = true);
 
-    await _fetchAtivo();
-    await _fetchChamados();
-
-    setState(() => loading = false);
-  }
-
-  // ================================================================
-  //                       BUSCA ATIVO
-  // ================================================================
-  Future<void> _fetchAtivo() async {
-    final token = await _getToken();
-    if (token == null) return;
-
     try {
-      final url =
-          Uri.parse("http://localhost:8001/api/equipment/${widget.ativoId}/");
-      final res = await http.get(url, headers: {"Authorization": "Token $token"});
+      ativo = await AtivosService.getAtivoById(widget.ativoId);
 
-      if (res.statusCode == 200) {
-        final decoded = jsonDecode(res.body);
-        ativo = decoded["data"]?["value"] ?? decoded;
-      }
+      // busca todos os chamados e filtra pelo ativo
+      var todosChamados = await ChamadosService.getChamados();
+      chamados = todosChamados.where((c) {
+        final equips = c["equipments_FK"] ?? [];
+        return equips.any((e) => e["id"] == widget.ativoId);
+      }).toList();
     } catch (e) {
-      _showMessage("Erro ao carregar ativo.");
+      print("❌ ERRO em AtivoDetalhesScreen: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao carregar dados do ativo.")),
+      );
+    } finally {
+      setState(() => loading = false);
     }
   }
 
-  // ================================================================
-  //                       BUSCA CHAMADOS
-  // ================================================================
-  Future<void> _fetchChamados() async {
-    final token = await _getToken();
-    if (token == null) return;
-
-    try {
-      final url =
-          Uri.parse("http://localhost:8001/api/task/?equipment_FK=${widget.ativoId}");
-      final res = await http.get(url, headers: {"Authorization": "Token $token"});
-
-      if (res.statusCode == 200) {
-        final decoded = jsonDecode(res.body);
-
-        chamados = decoded["data"]?["value"]?["results"] ??
-            decoded["data"]?["results"] ??
-            decoded["results"] ??
-            (decoded is List ? decoded : []) ??
-            [];
-      }
-    } catch (e) {
-      _showMessage("Erro ao carregar chamados.");
-    }
+  String safe(dynamic v) {
+    if (v == null) return "-";
+    if (v is Map && v.containsKey("name")) return v["name"].toString();
+    return v.toString();
   }
 
-  // ================================================================
-  void _showMessage(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  // ================================================================
-  //                        INFO TILE
-  // ================================================================
-  Widget _infoTile(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-        SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        SizedBox(height: 12),
-      ],
+  Widget infoTile(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 
-  // ================================================================
-  //                              UI
-  // ================================================================
+  String traduzStatus(String s) {
+    const map = {
+      "OPEN": "Aberto",
+      "WAITING_RESPONSIBLE": "Aguardando responsável",
+      "ONGOING": "Em andamento",
+      "DONE": "Concluído",
+      "FINISHED": "Finalizado",
+      "CANCELLED": "Cancelado",
+    };
+    return map[s] ?? s;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Detalhes do Ativo"),
-        backgroundColor: Color(0xFF1E293B),
+        title: const Text("Detalhes do Ativo"),
+        backgroundColor: const Color(0xFF1E293B),
       ),
-      backgroundColor: Color(0xFFF4F6FA),
+      backgroundColor: const Color(0xFFF4F6FA),
 
       body: loading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : ativo == null
-              ? Center(child: Text("Ativo não encontrado."))
+              ? const Center(child: Text("Ativo não encontrado."))
               : RefreshIndicator(
                   onRefresh: _loadAll,
                   child: SingleChildScrollView(
-                    physics: AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(16),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // =====================================================
-                        //                   CARD DO ATIVO
-                        // =====================================================
+                        // CARD DO ATIVO
                         Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
+                            boxShadow: const [
                               BoxShadow(
                                 color: Colors.black12,
                                 blurRadius: 8,
-                                offset: Offset(0, 4),
-                              ),
+                                offset: Offset(0, 3),
+                              )
                             ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                safeField(ativo!["name"]),
-                                style: TextStyle(
+                                safe(ativo!["name"]),
+                                style: const TextStyle(
                                   fontSize: 22,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              SizedBox(height: 10),
-                              _infoTile("Código", safeField(ativo!["code"])),
-                              _infoTile("Categoria", safeField(ativo!["category_FK"])),
-                              _infoTile("Ambiente", safeField(ativo!["environment_FK"])),
-                              _infoTile(
+                              const SizedBox(height: 10),
+                              infoTile("Código", safe(ativo!["code"])),
+                              infoTile("Categoria", safe(ativo!["category_FK"])),
+                              infoTile("Ambiente", safe(ativo!["environment_FK"])),
+                              infoTile(
                                 "Criado em",
-                                ativo!["creation_date"] != null
-                                    ? ativo!["creation_date"].toString().split("T")[0]
-                                    : "-",
+                                ativo!["creation_date"]
+                                        ?.toString()
+                                        .split("T")[0] ??
+                                    "-",
                               ),
                             ],
                           ),
                         ),
 
-                        SizedBox(height: 24),
+                        const SizedBox(height: 20),
 
-                        // =====================================================
-                        //                         QR CODE
-                        // =====================================================
-                       // =====================================================
-//                         QR CODE
-// =====================================================
-Container(
-  width: double.infinity,
-  padding: EdgeInsets.all(20),
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(18),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black12,
-        blurRadius: 8,
-        offset: Offset(0, 4),
-      ),
-    ],
-  ),
-  child: Column(
-    children: [
-      Text(
-        "QR Code do Ativo",
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      SizedBox(height: 16),
+                        // QR CODE
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
+                              )
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                "QR Code do Ativo",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              QrImageView(
+                                data: widget.ativoId.toString(),
+                                size: 200,
+                                backgroundColor: Colors.white,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                "ID: ${widget.ativoId}",
+                                style: TextStyle(color: Colors.grey[700]),
+                              ),
+                            ],
+                          ),
+                        ),
 
-      // QR CODE GERADO A PARTIR DO ID DO ATIVO
-      QrImageView(
-        data: widget.ativoId.toString(),
-        size: 200,
-        backgroundColor: Colors.white,
-      ),
+                        const SizedBox(height: 20),
 
-      SizedBox(height: 4),
-      Text(
-        "ID: ${widget.ativoId}",
-        style: TextStyle(color: Colors.grey[700]),
-      ),
-    ],
-  ),
-),
-
-
-                        SizedBox(height: 24),
-
-                        // =====================================================
-                        //                    CHAMADOS DO ATIVO
-                        // =====================================================
-                        Text(
-                          "Chamados deste Ativo",
+                        // CHAMADOS
+                        const Text(
+                          "Chamados do Ativo",
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 10),
 
                         chamados.isEmpty
                             ? Container(
-                                padding: EdgeInsets.all(18),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Text("Nenhum chamado relacionado."),
+                                child:
+                                    const Text("Nenhum chamado encontrado."),
                               )
                             : ListView.separated(
                                 shrinkWrap: true,
-                                physics: NeverScrollableScrollPhysics(),
+                                physics: const NeverScrollableScrollPhysics(),
                                 itemCount: chamados.length,
                                 separatorBuilder: (_, __) =>
-                                    SizedBox(height: 12),
-                                itemBuilder: (_, index) {
-                                  final task = chamados[index];
-
+                                    const SizedBox(height: 10),
+                                itemBuilder: (_, i) {
+                                  final t = chamados[i];
                                   final statusList =
-                                      task["TaskStatus_task_FK"] ?? [];
+                                      (t["TaskStatus_task_FK"] ?? []) as List;
                                   final lastStatus = statusList.isNotEmpty
                                       ? statusList.last["status"] ?? "-"
                                       : "-";
 
                                   return GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => ChamadoDetalhesScreen(
-                                            taskId: task["id"],
-                                          ),
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ChamadoDetalhesScreen(
+                                          taskId: t["id"],
                                         ),
-                                      );
-                                    },
+                                      ),
+                                    ),
                                     child: Container(
-                                      padding: EdgeInsets.all(18),
+                                      padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
-                                        boxShadow: [
+                                        borderRadius:
+                                            BorderRadius.circular(14),
+                                        boxShadow: const [
                                           BoxShadow(
                                             color: Colors.black12,
                                             blurRadius: 8,
-                                            offset: Offset(0, 4),
-                                          ),
+                                            offset: Offset(0, 3),
+                                          )
                                         ],
                                       ),
                                       child: Column(
@@ -304,18 +246,17 @@ Container(
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            safeField(task["name"]),
-                                            style: TextStyle(
+                                            safe(t["name"]),
+                                            style: const TextStyle(
                                               fontSize: 17,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          SizedBox(height: 6),
+                                          const SizedBox(height: 6),
                                           Text(
-                                            "Status: $lastStatus",
+                                            "Status: ${traduzStatus(lastStatus)}",
                                             style: TextStyle(
                                               color: Colors.grey[700],
-                                              fontSize: 14,
                                             ),
                                           ),
                                         ],
@@ -325,7 +266,7 @@ Container(
                                 },
                               ),
 
-                        SizedBox(height: 60),
+                        const SizedBox(height: 40),
                       ],
                     ),
                   ),

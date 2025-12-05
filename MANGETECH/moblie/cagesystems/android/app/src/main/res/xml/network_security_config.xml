@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net</domain>
+    </domain-config>
+</network-security-config>

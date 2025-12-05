@@ -34,7 +34,7 @@ class _ChamadosScreenState extends State<ChamadosScreen> {
   }
 
   // ============================================================
-  //   TRADUÇÃO DE STATUS
+  //   STATUS
   // ============================================================
   String formatStatus(String status) {
     const map = {
@@ -87,7 +87,7 @@ class _ChamadosScreenState extends State<ChamadosScreen> {
   }
 
   // ============================================================
-  //   TRADUÇÃO DE URGÊNCIA
+  //   URGÊNCIA
   // ============================================================
   String formatUrgency(String? urgency) {
     switch ((urgency ?? "").toUpperCase()) {
@@ -190,8 +190,11 @@ class _ChamadosScreenState extends State<ChamadosScreen> {
                     padding: EdgeInsets.all(10),
                     itemBuilder: (context, index) {
                       final t = chamados[index];
-                      final status = t["TaskStatus_task_FK"].isNotEmpty
-                          ? t["TaskStatus_task_FK"].last["status"]
+
+                      // 🔥 CORREÇÃO: status seguro SEM ERROS
+                      final statusList = (t["TaskStatus_task_FK"] ?? []) as List;
+                      final status = statusList.isNotEmpty
+                          ? statusList.last["status"]
                           : "OPEN";
 
                       final urgency = t["urgency_level"];
@@ -266,13 +269,15 @@ class _ChamadosScreenState extends State<ChamadosScreen> {
 
                               SizedBox(height: 6),
 
-                              // Data + Urgência traduzida
+                              // Data + Urgência
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    "Aberto em: ${DateTime.parse(t["creation_date"]).day}/${DateTime.parse(t["creation_date"]).month}/${DateTime.parse(t["creation_date"]).year}",
+                                    "Aberto em: ${DateTime.parse(t["creation_date"]).day.toString().padLeft(2, '0')}/"
+                                    "${DateTime.parse(t["creation_date"]).month.toString().padLeft(2, '0')}/"
+                                    "${DateTime.parse(t["creation_date"]).year}",
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Colors.grey.shade700,

@@ -5,23 +5,34 @@ from .environment import EnvironmentSerializer
 
 
 class EquipmentSerializer(serializers.ModelSerializer):
-    # Retorna o OBJETO COMPLETO (id + name)
+    # GET → mantém os nomes ANTIGOS que seu frontend usa
     category_FK = CategorySerializer(read_only=True)
     environment_FK = EnvironmentSerializer(read_only=True)
 
-    # Permite enviar apenas o ID no POST/PUT
-    category_FK_id = serializers.PrimaryKeyRelatedField(
+    # POST/PUT → recebe IDs nos nomes novos
+    category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
-        source="category_FK",
+        source='category_FK',
         write_only=True
     )
 
-    environment_FK_id = serializers.PrimaryKeyRelatedField(
+    environment_id = serializers.PrimaryKeyRelatedField(
         queryset=Environment.objects.all(),
-        source="environment_FK",
+        source='environment_FK',
         write_only=True
     )
 
     class Meta:
         model = Equipment
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "code",
+            "description",
+            "creation_date",
+            "category_FK",
+            "environment_FK",
+            "category_id",
+            "environment_id",
+        ]
+        read_only_fields = ["id", "creation_date"]
