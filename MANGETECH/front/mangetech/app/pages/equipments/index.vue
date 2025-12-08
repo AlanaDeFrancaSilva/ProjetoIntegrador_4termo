@@ -1,14 +1,19 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'dashboard-layout' })
 
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { getEquipments, createEquipment, updateEquipment, deleteEquipment } from '~/services/equipment.services'
 import { getCategories } from '~/services/category.services'
 import { getEnvironments } from '~/services/environment.services'
 
+import { getCurrentUser } from '~/services/user.service'
+
 import NewEquipmentModal from '~/components/NewEquipmentModal.vue'
 import EquipmentDetailsModal from '~/components/EquipmentDetailsModal.vue'
 
+/* ===========================================================
+        ESTADOS
+=========================================================== */
 const equipments = ref<any[]>([])
 const searchQuery = ref('')
 const isLoading = ref(false)
@@ -19,13 +24,52 @@ const selectedEquipment = ref<any | null>(null)
 
 const categoriesList = ref<any[]>([])
 const environmentsList = ref<any[]>([])
+const currentUser = ref<any>(null)
 
+/* ===========================================================
+        NORMALIZADOR
+=========================================================== */
 const normalizeApiReturn = (data: any) => {
-  if (!data) return [];
-  const d = data.data ?? data;
-  return d.results || (Array.isArray(d) ? d : []) || [];
-};
+  if (!data) return []
+  const d = data.data ?? data
+  return d.results || (Array.isArray(d) ? d : []) || []
+}
 
+/* ===========================================================
+        PERMISSÃO - CLIENTE NÃO PODE CRIAR ATIVO
+=========================================================== */
+const canCreateEquipment = computed(() => {
+  if (!currentUser.value) return false
+
+  return (
+    currentUser.value.groups?.includes("ADMIN") ||
+    currentUser.value.groups?.includes("admin") ||
+    currentUser.value.groups?.includes("tecnico") ||
+    currentUser.value.groups?.includes("Técnico")
+  )
+})
+
+/* ===========================================================
+        BUSCAR EQUIPAMENTOS (USANDO name=)
+=========================================================== */
+const fetchEquipmentsData = async () => {
+  isLoading.value = true
+
+  const params: Record<string, any> = {}
+
+  if (searchQuery.value) {
+    params.name = searchQuery.value   // 🔥 CORREÇÃO FINAL
+  }
+
+  const data = await getEquipments(params)
+  equipments.value = normalizeApiReturn(data)
+
+  isLoading.value = false
+}
+
+/* ===========================================================
+        BUSCAS AUXILIARES
+=========================================================== */
 const fetchCategories = async () => {
   const data = await getCategories()
   categoriesList.value = normalizeApiReturn(data)
@@ -36,20 +80,28 @@ const fetchEnvironments = async () => {
   environmentsList.value = normalizeApiReturn(data)
 }
 
-const fetchEquipmentsData = async () => {
-  isLoading.value = true
-  const params: Record<string, any> = {}
-  if (searchQuery.value) params.name = searchQuery.value
-  const data = await getEquipments(params)
-  equipments.value = normalizeApiReturn(data)
-  isLoading.value = false
-}
-
+/* ===========================================================
+        DETALHES DO EQUIPAMENTO
+=========================================================== */
 const openEquipmentDetails = async (equipment: any) => {
   await fetchCategories()
   await fetchEnvironments()
   selectedEquipment.value = { ...equipment }
   showEquipmentDetailsModal.value = true
+}
+
+/* ===========================================================
+        CRIAR ATIVO
+=========================================================== */
+const openCreateModal = async () => {
+  if (!canCreateEquipment.value) {
+    alert("Você não tem permissão para criar ativos.")
+    return
+  }
+
+  await fetchCategories()
+  await fetchEnvironments()
+  showNewEquipmentModal.value = true
 }
 
 const handleSave = async (newData: any) => {
@@ -58,6 +110,9 @@ const handleSave = async (newData: any) => {
   showNewEquipmentModal.value = false
 }
 
+/* ===========================================================
+        EDITAR ATIVO
+=========================================================== */
 const handleUpdate = async (updatedData: any) => {
   await updateEquipment(updatedData.id, updatedData)
   await fetchEquipmentsData()
@@ -65,7 +120,7 @@ const handleUpdate = async (updatedData: any) => {
 }
 
 /* ===========================================================
-                EXCLUIR EQUIPAMENTO
+        EXCLUIR ATIVO
 =========================================================== */
 const handleDelete = async (id: number) => {
   if (!confirm("Tem certeza que deseja excluir este ativo?")) return
@@ -74,15 +129,15 @@ const handleDelete = async (id: number) => {
   showEquipmentDetailsModal.value = false
 }
 
-watch(showNewEquipmentModal, async (isOpen) => {
-  if (isOpen) {
-    await fetchCategories()
-    await fetchEnvironments()
-  }
-})
-
-onMounted(fetchEquipmentsData)
+/* ===========================================================
+        WATCHERS & MOUNT
+=========================================================== */
 watch(searchQuery, fetchEquipmentsData)
+
+onMounted(async () => {
+  currentUser.value = await getCurrentUser()
+  await fetchEquipmentsData()
+})
 </script>
 
 <template>
@@ -96,14 +151,19 @@ watch(searchQuery, fetchEquipmentsData)
     <div class="actions-bar">
       <div class="search-box">
         <span class="icon-search">🔍</span>
-        <input v-model="searchQuery" type="text" placeholder="Buscar por nome ou código" />
+        <input v-model="searchQuery" type="text" placeholder="Buscar por nome" />
       </div>
 
       <div class="actions-buttons">
-        <button class="btn-primary" @click="showNewEquipmentModal = true">+ Novo Ativo</button>
+        <button 
+          v-if="canCreateEquipment" 
+          class="btn-primary" 
+          @click="openCreateModal"
+        >
+          + Novo Ativo
+        </button>
       </div>
 
-      <!-- Modal de criação -->
       <NewEquipmentModal
         v-if="showNewEquipmentModal"
         @close="showNewEquipmentModal = false"
@@ -144,7 +204,6 @@ watch(searchQuery, fetchEquipmentsData)
       </table>
     </div>
 
-    <!-- Modal de edição -->
     <EquipmentDetailsModal
       v-if="showEquipmentDetailsModal"
       :equipment="selectedEquipment"
@@ -160,10 +219,6 @@ watch(searchQuery, fetchEquipmentsData)
     </div>
   </div>
 </template>
-
-
-
-
 
 <style scoped lang="scss">
 .page-container {

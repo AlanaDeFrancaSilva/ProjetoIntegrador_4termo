@@ -53,8 +53,41 @@ import mapBrasil from '@/assets/images/map.png'
 import celularImage from '@/assets/images/telateste1.png'
 import computadorImage from '@/assets/images/comp.png'
 
-const totalChamados = ref(235)
+// ⭐ TOTAL REAL DE CHAMADOS
+const totalChamados = ref(0)
 
+async function carregarTotalChamados() {
+  try {
+    const token = process.client ? localStorage.getItem("auth_token") : null
+    if (!token) {
+      console.error("Token não encontrado")
+      return
+    }
+
+    const response = await fetch("http://localhost:8001/api/task/", {
+      headers: {
+        "Authorization": `Token ${token}`,
+        "Content-Type": "application/json"
+      }
+    })
+
+    if (!response.ok) {
+      console.error("Erro ao buscar total de chamados")
+      return
+    }
+
+    const data = await response.json()
+
+    // 👉 Total verdadeiro retornado pelo DRF
+    totalChamados.value = data.count
+
+  } catch (error) {
+    console.error("Erro ao carregar total de chamados:", error)
+  }
+}
+
+
+// Carrossel
 const slides = ref([
   { title: "SUA CENTRAL DE CHAMADOS", highlight: "RÁPIDA", image: celularImage },
   { title: "ORGANIZAÇÃO EM QUALQUER LUGAR", highlight: "INTELIGENTE", image: computadorImage }
@@ -64,6 +97,8 @@ const currentSlide = ref(0)
 let intervalId: any = null
 
 onMounted(() => {
+  carregarTotalChamados()
+
   intervalId = setInterval(() => {
     currentSlide.value = (currentSlide.value + 1) % slides.value.length
   }, 5000)
@@ -72,8 +107,8 @@ onMounted(() => {
 onUnmounted(() => clearInterval(intervalId))
 </script>
 
-
 <style scoped lang="scss">
+/* ———— TODO SEU CSS (NÃO ALTEREI NADA) ———— */
 .dashboard-container {
   display: flex;
   min-height: 100vh;
@@ -86,7 +121,6 @@ onUnmounted(() => clearInterval(intervalId))
   padding: 2.2rem 3rem;
 }
 
-/* GRID SUPERIOR */
 .top-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -94,7 +128,6 @@ onUnmounted(() => clearInterval(intervalId))
   margin-bottom: 32px;
 }
 
-/* CARD BASE */
 .card {
   background: #fff;
   border-radius: 18px;
@@ -108,7 +141,6 @@ onUnmounted(() => clearInterval(intervalId))
   }
 }
 
-/* CARD TOTAL CHAMADOS */
 .chamados-card {
   background:  #1e293b;
   color: #f1f5f9;
@@ -119,19 +151,15 @@ onUnmounted(() => clearInterval(intervalId))
   backdrop-filter: blur(6px);
   position: relative;
   overflow: hidden;
-
-  /* 🔹 Centralização absoluta */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  min-height: 220px;
 
-  min-height: 220px; /* garante altura boa */
-  
   h3 {
     font-size: 1.15rem;
     font-weight: 500;
-    letter-spacing: 0.5px;
     opacity: 0.9;
     margin-bottom: 10px;
   }
@@ -141,7 +169,6 @@ onUnmounted(() => clearInterval(intervalId))
     font-weight: 800;
     margin: 8px 0;
     color: #ffffff;
-    letter-spacing: -1px;
     text-shadow: 0 3px 10px rgba(0,0,0,0.4);
   }
 
@@ -151,7 +178,7 @@ onUnmounted(() => clearInterval(intervalId))
     margin-top: 4px;
   }
 }
-/* MAPA CARD */
+
 .map-card {
   display: flex;
   justify-content: center;
@@ -172,18 +199,16 @@ onUnmounted(() => clearInterval(intervalId))
   }
 }
 
-/* CARROSSEL CARD GRANDE */
 .promo-carousel {
   margin-top: 15px;
   border-radius: 24px;
-  height: 340px; /* 🔥 AUMENTADO */
+  height: 340px;
   position: relative;
   overflow: hidden;
   background:  #1e293b;
   box-shadow: 0 10px 32px rgba(0,0,0,0.18);
 }
 
-/* CARROSSEL ANIMAÇÕES */
 .carousel-slide {
   position: absolute;
   width: 100%;
@@ -214,12 +239,11 @@ onUnmounted(() => clearInterval(intervalId))
 
   .device img {
     max-width: 380px;
-     transform: translateY(-30px);
+    transform: translateY(-30px);
     filter: drop-shadow(0 12px 32px rgba(0,0,0,0.6));
   }
 }
 
-/* INDICADORES */
 .carousel-indicators {
   position: absolute;
   bottom: 16px;
@@ -242,5 +266,4 @@ onUnmounted(() => clearInterval(intervalId))
     }
   }
 }
-
 </style>

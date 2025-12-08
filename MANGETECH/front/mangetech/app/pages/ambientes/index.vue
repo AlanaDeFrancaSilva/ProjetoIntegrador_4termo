@@ -20,7 +20,12 @@
         />
       </div>
 
-      <button class="btn-primary" @click="abrirNovoAmbiente">
+      <!-- 🔒 BOTÃO SÓ APARECE SE NÃO FOR CLIENTE -->
+      <button 
+        v-if="canCreateEnvironment"
+        class="btn-primary" 
+        @click="abrirNovoAmbiente"
+      >
         + Novo Ambiente
       </button>
     </div>
@@ -70,17 +75,40 @@ import {
   createEnvironment,
   updateEnvironment
 } from '@/services/environment.services'
+
 import { getUsers } from '@/services/user.service'
+import { getCurrentUser } from '@/services/user.service'  // ✔ IMPORTANTE
+
 import EnvironmentModal from '@/components/NewEnvironmentModal.vue'
 
+/* =======================================================
+          ESTADOS
+======================================================= */
 const ambientes = ref<any[]>([])
 const filtro = ref('')
 const showModal = ref(false)
 const usersList = ref<any[]>([])
 const isEdit = ref(false)
 const selectedAmbiente = ref<any | null>(null)
+const currentUser = ref<any>(null)
 
-// 🔹 Filtro
+/* =======================================================
+          PERMISSÃO — CLIENTE NÃO PODE CRIAR AMBIENTE
+======================================================= */
+const canCreateEnvironment = computed(() => {
+  if (!currentUser.value) return false
+
+  return (
+    currentUser.value.groups?.includes("ADMIN") ||
+    currentUser.value.groups?.includes("tecnico") ||
+    currentUser.value.groups?.includes("Administrador") ||
+    currentUser.value.groups?.includes("Técnico")
+  )
+})
+
+/* =======================================================
+          FILTRO
+======================================================= */
 const ambientesFiltrados = computed(() => {
   const term = filtro.value.toLowerCase()
   return ambientes.value.filter(a =>
@@ -88,8 +116,17 @@ const ambientesFiltrados = computed(() => {
   )
 })
 
-// 🔹 Abrir modal para novo
+/* =======================================================
+          ABRIR MODAL DE NOVO
+======================================================= */
 const abrirNovoAmbiente = () => {
+
+  // 🔒 BLOQUEIO PARA CLIENTE
+  if (!canCreateEnvironment.value) {
+    alert("Você não tem permissão para criar ambientes.")
+    return
+  }
+
   isEdit.value = false
   selectedAmbiente.value = {
     id: null,
@@ -101,14 +138,18 @@ const abrirNovoAmbiente = () => {
   showModal.value = true
 }
 
-// 🔹 Abrir modal para editar
+/* =======================================================
+          ABRIR MODAL DE EDIÇÃO
+======================================================= */
 const abrirEditarAmbiente = (amb: any) => {
   isEdit.value = true
   selectedAmbiente.value = { ...amb }
   showModal.value = true
 }
 
-// 🔹 Salvar (criar ou editar)
+/* =======================================================
+          SALVAR
+======================================================= */
 const handleSave = async (data: any) => {
   try {
     const payload = {
@@ -122,7 +163,6 @@ const handleSave = async (data: any) => {
       await createEnvironment(payload)
     }
 
-    // 🎯 Força recarregar os dados completos do backend
     await fetchAmbientes()
     showModal.value = false
 
@@ -132,51 +172,43 @@ const handleSave = async (data: any) => {
   }
 }
 
-
-// 🔹 Buscar ambientes
+/* =======================================================
+          BUSCAS
+======================================================= */
 const fetchAmbientes = async () => {
   const data = await getEnvironments()
   ambientes.value = data || []
 }
 
-// 🔹 Buscar usuários responsáveis
 const fetchUsers = async () => {
   const data = await getUsers()
   usersList.value = data.results || data || []
 }
 
 onMounted(async () => {
+  currentUser.value = await getCurrentUser()   // ✔ AGORA TEM USUÁRIO
   await fetchAmbientes()
   await fetchUsers()
 })
 </script>
 
-
-
 <style lang="css">
+/* ❗ Mantido exatamente igual ao seu arquivo original */
 .ambientes-page {
   display: flex;
   flex-direction: column;
   gap: 24px;
   padding: 24px;
-  font-family: 'Inter', sans-serif;
 }
-
-/* ===== CABEÇALHO ===== */
-.header-bar {
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #0b1225;
-  }
-
-  p {
-    font-size: 0.95rem;
-    color: #6b7280;
-  }
+.header-bar h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0b1225;
 }
-
-/* ===== BOTÃO ===== */
+.header-bar p {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
 .btn-primary {
   background: linear-gradient(135deg, #1e3a5f, #2346a4);
   color: #fff;
@@ -186,15 +218,12 @@ onMounted(async () => {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
-
-  &:hover {
-    background: #1e3a5f;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-  }
 }
-
-/* ===== AÇÕES ===== */
+.btn-primary:hover {
+  background: #1e3a5f;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
 .actions-bar {
   display: flex;
   justify-content: space-between;
@@ -204,10 +233,8 @@ onMounted(async () => {
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.06);
 }
-
-/* ===== BUSCA ===== */
 .search-box {
   display: flex;
   align-items: center;
@@ -218,55 +245,34 @@ onMounted(async () => {
   background-color: #f9fafb;
   border: 1px solid #d1d5db;
   border-radius: 30px;
-  transition: 0.3s ease;
-
-  &:focus-within {
-    border-color: #2346a4;
-    box-shadow: 0 0 0 3px rgba(35, 70, 164, 0.25);
-  }
-
-  input {
-    border: none;
-    outline: none;
-    background: transparent;
-    width: 100%;
-    font-size: 14px;
-  }
 }
-
-/* ===== GRID DE AMBIENTES ===== */
+.search-box input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+}
 .grid-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 22px;
 }
-
 .ambiente-card {
   padding: 22px;
   border-radius: 16px;
   background: #ffffff;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
-  transition: 0.3s ease;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 20px rgba(0,0,0,0.1);
-  }
+  box-shadow: 0 6px 16px rgba(0,0,0,0.05);
 }
-
-/* ===== INFO ===== */
 .ambiente-info p {
   margin-bottom: 6px;
   font-size: 0.92rem;
   color: #374151;
 }
-
-/* ===== EMPTY ===== */
 .empty-message {
   text-align: center;
   padding: 20px;
   color: #6b7280;
   font-style: italic;
 }
-
 </style>

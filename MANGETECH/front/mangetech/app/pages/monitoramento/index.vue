@@ -23,7 +23,7 @@
       </div>
 
       <div class="info-card">
-        <p class="title">Total de Clientes</p>
+        <p class="title">Total de acesso</p>
         <h2>{{ totalClientes }}</h2>
       </div>
     </div>
