@@ -1,4 +1,4 @@
-/* ===========================================
+/* =========================================== 
    🟦 GET Usuário Logado
 =========================================== */
 export const getCurrentUser = async () => {
@@ -7,12 +7,15 @@ export const getCurrentUser = async () => {
   const token = localStorage.getItem("auth_token");
   if (!token) throw new Error("Token não encontrado");
 
-  const response = await fetch("http://localhost:8001/api/auth/users/me/", {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Token ${token}`,
-    },
-  });
+  const response = await fetch(
+    "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/auth/users/me/",
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     const error = await response.text();
@@ -26,9 +29,7 @@ export const getCurrentUser = async () => {
 
 
 /* ===========================================
-   🟩 GET LISTA DE USUÁRIOS (CORRETO!)
-   → Usa /api/custom-user/ (sua rota no backend)
-   → Permite ?role=tecnico sem token
+   🟩 GET LISTA DE USUÁRIOS
 =========================================== */
 export const getUsers = async (params?: Record<string, any>) => {
   if (!process.client) return [];
@@ -37,8 +38,7 @@ export const getUsers = async (params?: Record<string, any>) => {
 
   const query = new URLSearchParams(params || {}).toString();
 
-  // 🔥 ROTA CORRETA!
-  const url = `http://localhost:8001/api/custom-user/?${query}`;
+  const url = `https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/custom-user/?${query}`;
 
   console.log("📡 GET USERS →", url);
 
@@ -46,8 +46,6 @@ export const getUsers = async (params?: Record<string, any>) => {
     "Content-Type": "application/json",
   };
 
-  // 🔥 APENAS adiciona token se existir
-  // (não quebra /custom-user/?role=tecnico)
   if (token) headers["Authorization"] = `Token ${token}`;
 
   const response = await fetch(url, {
@@ -77,14 +75,17 @@ export const createUser = async (payload: any) => {
   const token = localStorage.getItem("auth_token");
   if (!token) throw new Error("Token não encontrado");
 
-  const response = await fetch("http://localhost:8001/api/custom-user/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Token ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    "https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/custom-user/",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
 
   if (!response.ok) {
     const error = await response.json();
@@ -107,7 +108,7 @@ export const updateUser = async (id: number, payload: any) => {
   if (!token) throw new Error("Token não encontrado");
 
   const response = await fetch(
-    `http://localhost:8001/api/custom-user/${id}/`,
+    `https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/custom-user/${id}/`,
     {
       method: "PUT",
       headers: {

@@ -29,7 +29,7 @@ ALLOWED_HOSTS = ['*'] #Permite todos os Hosts
 
 CORS_ALLOW_ALL_ORIGINS = True #qualquer um pode chamar o Back 
 
-CSRF_TRUSTED_ORIGINS = ['https://cage-systems.vercel.app']
+CSRF_TRUSTED_ORIGINS = ['https://projeto-cage.vercel.app']
 
 # Application definition
 

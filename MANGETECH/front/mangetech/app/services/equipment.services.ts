@@ -1,5 +1,7 @@
 import type { Equipment } from '~/models/equipment.model'
 
+const API_URL = 'https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net'
+
 /** Normalizar retorno da API */
 const norm = (data: any) =>
   data?.data?.value?.results ||
@@ -12,14 +14,14 @@ const norm = (data: any) =>
 export const getEquipments = async (params?: Record<string, any>) => {
   const { $authFetch } = useNuxtApp()
   const query = new URLSearchParams(params || {}).toString()
-  const { data } = await $authFetch(`http://localhost:8001/api/equipment/?${query}`)
+  const { data } = await $authFetch(`${API_URL}/api/equipment/?${query}`)
   return norm(data.value)
 }
 
 /** Buscar por ID */
 export const getEquipmentById = async (id: number | string) => {
   const { $authFetch } = useNuxtApp()
-  const { data } = await $authFetch(`http://localhost:8001/api/equipment/${id}/`)
+  const { data } = await $authFetch(`${API_URL}/api/equipment/${id}/`)
   return data.value
 }
 
@@ -35,7 +37,7 @@ export const createEquipment = async (equipmentData: any) => {
     environment_id: Number(equipmentData.environment_FK_id),
   }
 
-  const { data } = await $authFetch(`http://localhost:8001/api/equipment/`, {
+  const { data } = await $authFetch(`${API_URL}/api/equipment/`, {
     method: 'POST',
     body: payload,
   })
@@ -55,9 +57,9 @@ export const updateEquipment = async (id: number | string, data: any) => {
     environment_id: Number(data.environment_FK_id),
   }
 
-  const response = await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
-    method: "PUT",
-    body: payload
+  const response = await $authFetch(`${API_URL}/api/equipment/${id}/`, {
+    method: 'PUT',
+    body: payload,
   })
 
   return response.data?.value || response.data
@@ -66,14 +68,14 @@ export const updateEquipment = async (id: number | string, data: any) => {
 /** Buscar Categorias */
 export const getCategories = async () => {
   const { $authFetch } = useNuxtApp()
-  const { data } = await $authFetch(`http://localhost:8001/api/category/`)
+  const { data } = await $authFetch(`${API_URL}/api/category/`)
   return norm(data.value)
 }
 
 /** Buscar Ambientes */
 export const getEnvironments = async () => {
   const { $authFetch } = useNuxtApp()
-  const { data } = await $authFetch(`http://localhost:8001/api/environment/`)
+  const { data } = await $authFetch(`${API_URL}/api/environment/`)
   return norm(data.value)
 }
 
@@ -81,8 +83,8 @@ export const getEnvironments = async () => {
 export const deleteEquipment = async (id: number | string) => {
   const { $authFetch } = useNuxtApp()
 
-  const response = await $authFetch(`http://localhost:8001/api/equipment/${id}/`, {
-    method: "DELETE"
+  const response = await $authFetch(`${API_URL}/api/equipment/${id}/`, {
+    method: 'DELETE',
   })
 
   return response

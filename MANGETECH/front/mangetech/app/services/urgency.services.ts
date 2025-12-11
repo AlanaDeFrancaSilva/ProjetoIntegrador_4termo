@@ -1,5 +1,5 @@
 export const getUrgencyLevels = async () => {
-  return await $fetch('http://127.0.0.1:8001/api/urgency-levels/', {
+  return await $fetch('https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net/api/urgency-levels/', {
     method: 'GET'
   })
 }
