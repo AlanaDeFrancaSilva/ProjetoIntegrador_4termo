@@ -9,7 +9,7 @@ import { getUrgencyLevels } from '~/services/urgency.services'
 import NewTaskModal from '~/components/NewTaskModal.vue'
 import TaskDetailsModal from '~/components/TaskDetailsModal.vue'
 
-// 🔥 Store de usuário
+
 import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 
@@ -26,9 +26,7 @@ const urgencyOptions = ref<any[]>([])
 const selectedTask = ref<any | null>(null)
 const showTaskDetailsModal = ref(false)
 
-// =========================
-// FORMATADORES
-// =========================
+
 const formatStatus = (status: string) => {
   const map: Record<string, string> = {
     OPEN: 'Aberto',
@@ -51,12 +49,7 @@ const formatUrgency = (level: string) => {
   return map[level] || level
 }
 
-// =========================
-// FETCH USERS (TÉCNICOS)
-// =========================
-// =========================
-// FETCH USERS (TÉCNICOS)
-// =========================
+
 const fetchUsers = async () => {
   try {
     console.log("🚀 Chamando backend GET /users/?role=tecnico ...");
@@ -91,9 +84,7 @@ const fetchUsers = async () => {
   }
 };
 
-// =========================
-// FETCH EQUIPAMENTOS / URGÊNCIA
-// =========================
+
 const fetchEquipments = async () => {
   equipmentList.value = await getEquipments()
 }
@@ -107,16 +98,11 @@ const fetchUrgencyLevels = async () => {
   }))
 }
 
-// =========================
-// ÚLTIMO STATUS
-// =========================
+
 const getLatestStatus = (task: any) =>
   task.TaskStatus_task_FK?.at(-1)?.status || 'Sem Status'
 
 
-// =========================
-// FETCH TASKS (CHAMADOS)
-// =========================
 const fetchTasks = async () => {
   try {
     isLoading.value = true
@@ -139,9 +125,7 @@ const fetchTasks = async () => {
   }
 }
 
-// =========================
-// ABRIR MODAL DETALHES
-// =========================
+
 const openTaskDetails = async (task: any) => {
   await fetchUrgencyLevels()
   await fetchUsers()
@@ -150,9 +134,7 @@ const openTaskDetails = async (task: any) => {
   showTaskDetailsModal.value = true
 }
 
-// =========================
-// CRUD → CREATE / UPDATE
-// =========================
+
 const handleSave = async (newData: any) => {
   if (!userStore.isAdmin && !userStore.isCliente) {
     alert('Você não tem permissão para criar chamados.')
@@ -170,9 +152,7 @@ const handleUpdate = async (updatedData: any) => {
   showTaskDetailsModal.value = false
 }
 
-// =========================
-// QUANDO ABRE MODAL DE CRIAÇÃO
-// =========================
+
 watch(showNewTaskModal, async (isOpen) => {
   if (isOpen) {
     await fetchUsers()
@@ -181,13 +161,11 @@ watch(showNewTaskModal, async (isOpen) => {
   }
 })
 
-// =========================
-// ON MOUNTED → AQUI ESTÁ A CORREÇÃO!
-// =========================
+
 onMounted(async () => {
   await fetchTasks()
 
-  // 🔥 CORREÇÃO: Cliente & Admin carregam técnicos automaticamente
+
   if (userStore.isCliente || userStore.isAdmin) {
     await fetchUsers()
     await fetchEquipments()
@@ -316,7 +294,7 @@ watch(urgencyFilter, fetchTasks)
   font-size: 14px;
 }
 
-/* 📌 CONTAINER PRINCIPAL DE AÇÕES */
+
 .actions-bar {
   display: flex;
   justify-content: space-between;
@@ -329,7 +307,7 @@ watch(urgencyFilter, fetchTasks)
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-/* 🔎 Campo de busca */
+
 .search-box {
   display: flex;
   align-items: center;
@@ -363,7 +341,7 @@ watch(urgencyFilter, fetchTasks)
   font-size: 14px;
 }
 
-/* 🎯 Botões e filtro */
+
 .actions-buttons {
   display: flex;
   align-items: center;
@@ -412,7 +390,7 @@ select option {
   border-color: #1e293b;
 }
 
-/* 📋 Tabela */
+
 .table-container {
   overflow-x: auto;
   border-radius: 8px;
@@ -438,7 +416,7 @@ select option {
   font-size: 14px;
 }
 
-/* 🔵 Badges */
+
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -457,7 +435,7 @@ select option {
   background-color: #f3f4f6;
 }
 
-/* Urgência */
+
 .urgency-badge {
   display: inline-block;
   padding: 6px 14px;

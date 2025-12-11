@@ -77,13 +77,10 @@ import {
 } from '@/services/environment.services'
 
 import { getUsers } from '@/services/user.service'
-import { getCurrentUser } from '@/services/user.service'  // ✔ IMPORTANTE
-
+import { getCurrentUser } from '@/services/user.service'  
 import EnvironmentModal from '@/components/NewEnvironmentModal.vue'
 
-/* =======================================================
-          ESTADOS
-======================================================= */
+
 const ambientes = ref<any[]>([])
 const filtro = ref('')
 const showModal = ref(false)
@@ -92,9 +89,7 @@ const isEdit = ref(false)
 const selectedAmbiente = ref<any | null>(null)
 const currentUser = ref<any>(null)
 
-/* =======================================================
-          PERMISSÃO — CLIENTE NÃO PODE CRIAR AMBIENTE
-======================================================= */
+
 const canCreateEnvironment = computed(() => {
   if (!currentUser.value) return false
 
@@ -106,9 +101,7 @@ const canCreateEnvironment = computed(() => {
   )
 })
 
-/* =======================================================
-          FILTRO
-======================================================= */
+
 const ambientesFiltrados = computed(() => {
   const term = filtro.value.toLowerCase()
   return ambientes.value.filter(a =>
@@ -116,12 +109,10 @@ const ambientesFiltrados = computed(() => {
   )
 })
 
-/* =======================================================
-          ABRIR MODAL DE NOVO
-======================================================= */
+
 const abrirNovoAmbiente = () => {
 
-  // 🔒 BLOQUEIO PARA CLIENTE
+
   if (!canCreateEnvironment.value) {
     alert("Você não tem permissão para criar ambientes.")
     return
@@ -138,18 +129,14 @@ const abrirNovoAmbiente = () => {
   showModal.value = true
 }
 
-/* =======================================================
-          ABRIR MODAL DE EDIÇÃO
-======================================================= */
+
 const abrirEditarAmbiente = (amb: any) => {
   isEdit.value = true
   selectedAmbiente.value = { ...amb }
   showModal.value = true
 }
 
-/* =======================================================
-          SALVAR
-======================================================= */
+
 const handleSave = async (data: any) => {
   try {
     const payload = {
@@ -172,9 +159,7 @@ const handleSave = async (data: any) => {
   }
 }
 
-/* =======================================================
-          BUSCAS
-======================================================= */
+
 const fetchAmbientes = async () => {
   const data = await getEnvironments()
   ambientes.value = data || []
@@ -186,14 +171,14 @@ const fetchUsers = async () => {
 }
 
 onMounted(async () => {
-  currentUser.value = await getCurrentUser()   // ✔ AGORA TEM USUÁRIO
+  currentUser.value = await getCurrentUser()  
   await fetchAmbientes()
   await fetchUsers()
 })
 </script>
 
 <style lang="css">
-/* ❗ Mantido exatamente igual ao seu arquivo original */
+
 .ambientes-page {
   display: flex;
   flex-direction: column;

@@ -5,9 +5,7 @@ import { useUserStore } from '@/stores/user'
 const API_URL = 'https://cage-int-cqg3ahh4a4hjbhb4.westus3-01.azurewebsites.net'
 
 
-/* ============================================================
-    GET TASKS (com filtros)
-============================================================ */
+
 export const getTasks = (params?: Record<string, any>) => {
   const { $authFetch } = useNuxtApp()
   const query = new URLSearchParams(params || {}).toString()
@@ -15,23 +13,19 @@ export const getTasks = (params?: Record<string, any>) => {
 }
 
 
-/* ============================================================
-    GET POR ID
-============================================================ */
+
 export const getTaskById = (id: string) => {
   const { $authFetch } = useNuxtApp()
   return $authFetch<Task>(`${API_URL}/api/task/${id}/`)
 }
 
 
-/* ============================================================
-    CRIAR TASK (somente admin ou cliente)
-============================================================ */
+
 export const createTask = async (data: any) => {
   const { $authFetch } = useNuxtApp()
   const user = useUserStore()
 
-  // 🚫 Bloqueio frontal para técnico
+
   if (!user.isAdmin && !user.isCliente) {
     throw new Error("Usuário sem permissão para criar chamados.")
   }
@@ -43,9 +37,7 @@ export const createTask = async (data: any) => {
 }
 
 
-/* ============================================================
-    ATUALIZAR TASK — VERSÃO FINAL E CORRIGIDA
-============================================================ */
+
 export const updateTask = (id: number, data: any) => {
   const { $authFetch } = useNuxtApp()
 
@@ -56,23 +48,19 @@ export const updateTask = (id: number, data: any) => {
       description: data.description,
       urgency_level: data.urgency_level,
 
-      // 🔥 Status sendo enviado corretamente
+
       status: data.status,
 
-      // Arrays tratados — aceita tanto id quanto objetos
       responsibles_FK: data.responsibles_FK?.map((r: any) => r.id || r) || [],
       equipments_FK: data.equipments_FK?.map((e: any) => e.id || e) || [],
 
-      // 🔥 Observações / Andamento
       progress_notes: data.progress_notes || "",
     },
   })
 }
 
 
-/* ============================================================
-    DELETAR TASK
-============================================================ */
+
 export const deleteTaskById = (id: string) => {
   const { $authFetch } = useNuxtApp()
   return $authFetch(`${API_URL}/api/task/${id}/`, {

@@ -93,18 +93,14 @@ import { getUsers } from '~/services/user.service'
 import { Chart, registerables } from 'chart.js'
 Chart.register(...registerables)
 
-/* ======================================
-            ESTADOS
-====================================== */
+
 const user = ref(null)
 const totalChamados = ref(0)
 const mensagens = ref(0)
 const totalClientes = ref(0)
 const chamados = ref([])
 
-/* ======================================
-        MAPA PARA PT-BR NO GRÁFICO
-====================================== */
+
 const statusLabels = {
   OPEN: 'Aberto',
   WAITING_RESPONSIBLE: 'Aguardando Responsável',
@@ -114,9 +110,7 @@ const statusLabels = {
   CANCELLED: 'Cancelado'
 }
 
-/* ======================================
-        FUNÇÃO FINAL DE STATUS
-====================================== */
+
 const getLatestStatus = (task) => {
   const arr = task?.TaskStatus_task_FK
   if (!arr || arr.length === 0) return null
@@ -128,9 +122,7 @@ const getLatestStatus = (task) => {
 const normalize = (str) =>
   str?.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || ''
 
-/* ======================================
-            BUSCAR DADOS
-====================================== */
+
 onMounted(async () => {
   try {
     user.value = await getCurrentUser()
@@ -151,9 +143,7 @@ onMounted(async () => {
   }
 })
 
-/* ======================================
-                GRÁFICO
-====================================== */
+
 let statusChartInstance = null
 
 function renderCharts() {
@@ -169,7 +159,6 @@ function renderCharts() {
 
   if (statusChartInstance) statusChartInstance.destroy()
 
-  // Conversão para PT-BR no gráfico
   const labelsPT = Object.keys(statusCounts).map(status => statusLabels[status] || status)
 
   statusChartInstance = new Chart(ctx, {
@@ -190,9 +179,7 @@ onUnmounted(() => {
   if (statusChartInstance) statusChartInstance.destroy()
 })
 
-/* ======================================
-              CALENDÁRIO
-====================================== */
+
 const currentMonth = ref(new Date())
 const selectedDate = ref(new Date())
 

@@ -53,7 +53,7 @@ import mapBrasil from '@/assets/images/map.png'
 import celularImage from '@/assets/images/telateste1.png'
 import computadorImage from '@/assets/images/comp.png'
 
-// ⭐ TOTAL REAL DE CHAMADOS
+
 const totalChamados = ref(0)
 
 async function carregarTotalChamados() {
@@ -78,7 +78,7 @@ async function carregarTotalChamados() {
 
     const data = await response.json()
 
-    // 👉 Total verdadeiro retornado pelo DRF
+
     totalChamados.value = data.count
 
   } catch (error) {
@@ -87,7 +87,7 @@ async function carregarTotalChamados() {
 }
 
 
-// Carrossel
+
 const slides = ref([
   { title: "SUA CENTRAL DE CHAMADOS", highlight: "RÁPIDA", image: celularImage },
   { title: "ORGANIZAÇÃO EM QUALQUER LUGAR", highlight: "INTELIGENTE", image: computadorImage }
@@ -108,7 +108,7 @@ onUnmounted(() => clearInterval(intervalId))
 </script>
 
 <style scoped lang="scss">
-/* ———— TODO SEU CSS (NÃO ALTEREI NADA) ———— */
+
 .dashboard-container {
   display: flex;
   min-height: 100vh;

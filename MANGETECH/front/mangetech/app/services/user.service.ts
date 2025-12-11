@@ -1,6 +1,4 @@
-/* =========================================== 
-   🟦 GET Usuário Logado
-=========================================== */
+
 export const getCurrentUser = async () => {
   if (!process.client) return null;
 
@@ -28,9 +26,6 @@ export const getCurrentUser = async () => {
 
 
 
-/* ===========================================
-   🟩 GET LISTA DE USUÁRIOS
-=========================================== */
 export const getUsers = async (params?: Record<string, any>) => {
   if (!process.client) return [];
 
@@ -66,9 +61,7 @@ export const getUsers = async (params?: Record<string, any>) => {
 
 
 
-/* ===========================================
-   🟧 CREATE USER
-=========================================== */
+
 export const createUser = async (payload: any) => {
   if (!process.client) return null;
 
@@ -98,9 +91,7 @@ export const createUser = async (payload: any) => {
 
 
 
-/* ===========================================
-   🟨 UPDATE USER
-=========================================== */
+
 export const updateUser = async (id: number, payload: any) => {
   if (!process.client) return null;
 

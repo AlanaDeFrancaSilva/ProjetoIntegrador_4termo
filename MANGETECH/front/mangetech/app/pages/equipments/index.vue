@@ -11,9 +11,7 @@ import { getCurrentUser } from '~/services/user.service'
 import NewEquipmentModal from '~/components/NewEquipmentModal.vue'
 import EquipmentDetailsModal from '~/components/EquipmentDetailsModal.vue'
 
-/* ===========================================================
-        ESTADOS
-=========================================================== */
+
 const equipments = ref<any[]>([])
 const searchQuery = ref('')
 const isLoading = ref(false)
@@ -26,18 +24,14 @@ const categoriesList = ref<any[]>([])
 const environmentsList = ref<any[]>([])
 const currentUser = ref<any>(null)
 
-/* ===========================================================
-        NORMALIZADOR
-=========================================================== */
+
 const normalizeApiReturn = (data: any) => {
   if (!data) return []
   const d = data.data ?? data
   return d.results || (Array.isArray(d) ? d : []) || []
 }
 
-/* ===========================================================
-        PERMISSÃO - CLIENTE NÃO PODE CRIAR ATIVO
-=========================================================== */
+
 const canCreateEquipment = computed(() => {
   if (!currentUser.value) return false
 
@@ -49,16 +43,14 @@ const canCreateEquipment = computed(() => {
   )
 })
 
-/* ===========================================================
-        BUSCAR EQUIPAMENTOS (USANDO name=)
-=========================================================== */
+
 const fetchEquipmentsData = async () => {
   isLoading.value = true
 
   const params: Record<string, any> = {}
 
   if (searchQuery.value) {
-    params.name = searchQuery.value   // 🔥 CORREÇÃO FINAL
+    params.name = searchQuery.value   
   }
 
   const data = await getEquipments(params)
@@ -67,9 +59,7 @@ const fetchEquipmentsData = async () => {
   isLoading.value = false
 }
 
-/* ===========================================================
-        BUSCAS AUXILIARES
-=========================================================== */
+
 const fetchCategories = async () => {
   const data = await getCategories()
   categoriesList.value = normalizeApiReturn(data)
@@ -80,9 +70,7 @@ const fetchEnvironments = async () => {
   environmentsList.value = normalizeApiReturn(data)
 }
 
-/* ===========================================================
-        DETALHES DO EQUIPAMENTO
-=========================================================== */
+
 const openEquipmentDetails = async (equipment: any) => {
   await fetchCategories()
   await fetchEnvironments()
@@ -90,9 +78,7 @@ const openEquipmentDetails = async (equipment: any) => {
   showEquipmentDetailsModal.value = true
 }
 
-/* ===========================================================
-        CRIAR ATIVO
-=========================================================== */
+
 const openCreateModal = async () => {
   if (!canCreateEquipment.value) {
     alert("Você não tem permissão para criar ativos.")
@@ -110,18 +96,14 @@ const handleSave = async (newData: any) => {
   showNewEquipmentModal.value = false
 }
 
-/* ===========================================================
-        EDITAR ATIVO
-=========================================================== */
+
 const handleUpdate = async (updatedData: any) => {
   await updateEquipment(updatedData.id, updatedData)
   await fetchEquipmentsData()
   showEquipmentDetailsModal.value = false
 }
 
-/* ===========================================================
-        EXCLUIR ATIVO
-=========================================================== */
+
 const handleDelete = async (id: number) => {
   if (!confirm("Tem certeza que deseja excluir este ativo?")) return
   await deleteEquipment(id)
@@ -129,9 +111,7 @@ const handleDelete = async (id: number) => {
   showEquipmentDetailsModal.value = false
 }
 
-/* ===========================================================
-        WATCHERS & MOUNT
-=========================================================== */
+
 watch(searchQuery, fetchEquipmentsData)
 
 onMounted(async () => {
